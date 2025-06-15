@@ -20,6 +20,7 @@ const App = () => {
   }, []);
   const [dailyStats, setDailyStats] = useState([]);
   
+
   useEffect(() => {
     fetch("https://badminton-api-j9ja.onrender.com/get_ongoing_games")
       .then((res) => res.json())
@@ -345,7 +346,8 @@ const CreateGameScreen = ({ players, onBack, setCurrentGame, setOngoingGames }) 
   const [matchCount, setMatchCount] = useState(3);
   const [teams, setTeams] = useState([]);
   const [schedule, setSchedule] = useState([]);
-  const [playerGameCounts] = useState({});
+  const [playerGameCounts, setPlayerGameCounts] = useState({});
+
 
   const togglePlayer = (name) => {
     setSelectedPlayers((prev) =>
@@ -363,45 +365,40 @@ const CreateGameScreen = ({ players, onBack, setCurrentGame, setOngoingGames }) 
     setTeams([team1, team2]);
   };
 
-  // const generateSchedule = () => {
-  //   const [team1, team2] = teams;
+  const generateSchedule = () => {
+  const [team1, team2] = teams;
 
-  //   if (team1.length < 2 || team2.length < 2) {
-  //     alert("Each team must have at least 2 players to generate valid matches.");
-  //     return;
-  //   }
+  if (team1.length < 2 || team2.length < 2) {
+    alert("Each team must have at least 2 players to generate valid matches.");
+    return;
+  }
 
-  //   const playerGameCount = {};
-  //   const schedule = [];
+  const playerGameCount = {};
+  const newSchedule = [];
 
-  //   [...team1, ...team2].forEach((p) => (playerGameCount[p] = 0));
+  [...team1, ...team2].forEach((p) => (playerGameCount[p] = 0));
 
-  //   for (let m = 0; m < matchCount; m++) {
-  //     const sortedTeam1 = [...team1].sort((a, b) => playerGameCount[a] - playerGameCount[b]);
-  //     const sortedTeam2 = [...team2].sort((a, b) => playerGameCount[a] - playerGameCount[b]);
+  for (let m = 0; m < matchCount; m++) {
+    const sortedTeam1 = [...team1].sort((a, b) => playerGameCount[a] - playerGameCount[b]);
+    const sortedTeam2 = [...team2].sort((a, b) => playerGameCount[a] - playerGameCount[b]);
 
-  //     const pair1 = sortedTeam1.slice(0, 2).sort(() => Math.random() - 0.5);
-  //     const pair2 = sortedTeam2.slice(0, 2).sort(() => Math.random() - 0.5);
+    const pair1 = sortedTeam1.slice(0, 2).sort(() => Math.random() - 0.5);
+    const pair2 = sortedTeam2.slice(0, 2).sort(() => Math.random() - 0.5);
 
-  //     if (pair1.length < 2 || pair2.length < 2) {
-  //       alert("Not enough players to create fair teams.");
-  //       return;
-  //     }
+    if (pair1.length < 2 || pair2.length < 2) {
+      alert("Not enough players to create fair teams.");
+      return;
+    }
 
-  //     schedule.push({ team1: pair1, team2: pair2 });
+    newSchedule.push({ team1: pair1, team2: pair2 });
 
-  //     [...pair1, ...pair2].forEach((p) => (playerGameCount[p] += 1));
-  //   }
+    [...pair1, ...pair2].forEach((p) => (playerGameCount[p] += 1));
+  }
 
-  //   setSchedule(schedule);
-  //   setPlayerGameCounts(playerGameCount);
-  // };
+  setSchedule(newSchedule);
+  setPlayerGameCounts(playerGameCount);
+};
 
-  // useEffect(() => {
-  //   if (teams.length === 2 && matchCount > 0) {
-  //     generateSchedule();
-  //   }
-  // }, [teams, matchCount]);
 
   const createGame = async () => {
     const res = await fetch("https://badminton-api-j9ja.onrender.com/create_game", {
@@ -487,7 +484,22 @@ const CreateGameScreen = ({ players, onBack, setCurrentGame, setOngoingGames }) 
           <h4>Team 2: {teams[1].join(", ")}</h4>
         </div>
       )}
-
+      <div style={{ marginTop: "1rem" }}>
+          <button
+      onClick={generateSchedule}
+      style={{
+        padding: "10px",
+        backgroundColor: "#17a2b8",
+        color: "white",
+        border: "none",
+        borderRadius: "5px",
+        marginTop: "1rem",
+        cursor: "pointer"
+      }}
+    >
+      📅 Generate Schedule
+    </button>
+</div>
       {schedule.length > 0 && (
         <div style={{ marginTop: "1rem" }}>
           <h3>🔁 Match Schedule Preview</h3>
