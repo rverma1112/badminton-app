@@ -345,7 +345,7 @@ const CreateGameScreen = ({ players, onBack, setCurrentGame, setOngoingGames }) 
   const [matchCount, setMatchCount] = useState(3);
   const [teams, setTeams] = useState([]);
   const [schedule, setSchedule] = useState([]);
-  const [playerGameCounts, setPlayerGameCounts] = useState({});
+  const [playerGameCounts] = useState({});
 
   const togglePlayer = (name) => {
     setSelectedPlayers((prev) =>
