@@ -371,31 +371,31 @@ const CreateGameScreen = ({ players, onBack, setCurrentGame, setOngoingGames }) 
   //     return;
   //   }
 
-    const playerGameCount = {};
-    const schedule = [];
+  //   const playerGameCount = {};
+  //   const schedule = [];
 
-    [...team1, ...team2].forEach((p) => (playerGameCount[p] = 0));
+  //   [...team1, ...team2].forEach((p) => (playerGameCount[p] = 0));
 
-    for (let m = 0; m < matchCount; m++) {
-      const sortedTeam1 = [...team1].sort((a, b) => playerGameCount[a] - playerGameCount[b]);
-      const sortedTeam2 = [...team2].sort((a, b) => playerGameCount[a] - playerGameCount[b]);
+  //   for (let m = 0; m < matchCount; m++) {
+  //     const sortedTeam1 = [...team1].sort((a, b) => playerGameCount[a] - playerGameCount[b]);
+  //     const sortedTeam2 = [...team2].sort((a, b) => playerGameCount[a] - playerGameCount[b]);
 
-      const pair1 = sortedTeam1.slice(0, 2).sort(() => Math.random() - 0.5);
-      const pair2 = sortedTeam2.slice(0, 2).sort(() => Math.random() - 0.5);
+  //     const pair1 = sortedTeam1.slice(0, 2).sort(() => Math.random() - 0.5);
+  //     const pair2 = sortedTeam2.slice(0, 2).sort(() => Math.random() - 0.5);
 
-      if (pair1.length < 2 || pair2.length < 2) {
-        alert("Not enough players to create fair teams.");
-        return;
-      }
+  //     if (pair1.length < 2 || pair2.length < 2) {
+  //       alert("Not enough players to create fair teams.");
+  //       return;
+  //     }
 
-      schedule.push({ team1: pair1, team2: pair2 });
+  //     schedule.push({ team1: pair1, team2: pair2 });
 
-      [...pair1, ...pair2].forEach((p) => (playerGameCount[p] += 1));
-    }
+  //     [...pair1, ...pair2].forEach((p) => (playerGameCount[p] += 1));
+  //   }
 
-    setSchedule(schedule);
-    setPlayerGameCounts(playerGameCount);
-  };
+  //   setSchedule(schedule);
+  //   setPlayerGameCounts(playerGameCount);
+  // };
 
   // useEffect(() => {
   //   if (teams.length === 2 && matchCount > 0) {
