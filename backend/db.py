@@ -503,7 +503,7 @@ def delete_game(game_id):
     conn = sqlite3.connect("badminton.db")
     cursor = conn.cursor()
 
-    # Delete from all related tables
+    # Delete from all related tables (no harm if game_id doesn't exist)
     cursor.execute("DELETE FROM completed_games WHERE id = ?", (game_id,))
     cursor.execute("DELETE FROM game_stats WHERE game_id = ?", (game_id,))
     cursor.execute("DELETE FROM match_scores WHERE game_id = ?", (game_id,))

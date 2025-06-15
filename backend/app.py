@@ -176,19 +176,25 @@ def update_match_score_route():
     )
     return jsonify({"status": "ok" if success else "error"})
 
+from flask import Flask, request, jsonify
+from db import delete_game  # ✅ import your function
+
 @app.route("/delete_game", methods=["POST"])
-def delete_game_route():
-    data = request.get_json()
-    game_id = data.get("game_id")
-
-    if not game_id:
-        return jsonify({"status": "error", "message": "Missing game_id"}), 400
-
+def handle_delete_game():
     try:
+        data = request.get_json()
+        game_id = data.get("game_id")
+
+        if game_id is None:
+            return jsonify({"status": "error", "message": "game_id is required"}), 400
+
         delete_game(game_id)
         return jsonify({"status": "ok", "message": f"Game {game_id} deleted."})
+    
     except Exception as e:
+        print("Error in /delete_game:", e)
         return jsonify({"status": "error", "message": str(e)}), 500
+
 
 if __name__ == "__main__":
     app.run(debug=True)
