@@ -1,6 +1,8 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from db import init_db, add_player_to_db, get_all_players_from_db,save_game_to_db,get_overall_rankings
+from db import delete_game
+
 import itertools
 import random
 from collections import defaultdict
@@ -174,6 +176,19 @@ def update_match_score_route():
     )
     return jsonify({"status": "ok" if success else "error"})
 
+@app.route("/delete_game", methods=["POST"])
+def delete_game_route():
+    data = request.get_json()
+    game_id = data.get("game_id")
+
+    if not game_id:
+        return jsonify({"status": "error", "message": "Missing game_id"}), 400
+
+    try:
+        delete_game(game_id)
+        return jsonify({"status": "ok", "message": f"Game {game_id} deleted."})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)

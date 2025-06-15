@@ -497,3 +497,17 @@ def update_match_score(game_id, match_index, team1_score, team2_score):
     conn.commit()
     conn.close()
     return True
+
+
+def delete_game(game_id):
+    conn = sqlite3.connect("badminton.db")
+    cursor = conn.cursor()
+
+    # Delete from all related tables
+    cursor.execute("DELETE FROM completed_games WHERE id = ?", (game_id,))
+    cursor.execute("DELETE FROM game_stats WHERE game_id = ?", (game_id,))
+    cursor.execute("DELETE FROM match_scores WHERE game_id = ?", (game_id,))
+    cursor.execute("DELETE FROM ongoing_games WHERE id = ?", (game_id,))
+
+    conn.commit()
+    conn.close()
