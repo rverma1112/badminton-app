@@ -363,13 +363,13 @@ const CreateGameScreen = ({ players, onBack, setCurrentGame, setOngoingGames }) 
     setTeams([team1, team2]);
   };
 
-  const generateSchedule = () => {
-    const [team1, team2] = teams;
+  // const generateSchedule = () => {
+  //   const [team1, team2] = teams;
 
-    if (team1.length < 2 || team2.length < 2) {
-      alert("Each team must have at least 2 players to generate valid matches.");
-      return;
-    }
+  //   if (team1.length < 2 || team2.length < 2) {
+  //     alert("Each team must have at least 2 players to generate valid matches.");
+  //     return;
+  //   }
 
     const playerGameCount = {};
     const schedule = [];
