@@ -11,7 +11,7 @@ const App = () => {
   const [players, setPlayers] = useState([]);
   const [currentGame, setCurrentGame] = useState(null);
   const [ongoingGames, setOngoingGames] = useState([]);
-  const [viewedPlayer, setViewedPlayer] = useState(null);
+  // const [viewedPlayer, setViewedPlayer] = useState(null);
 
   useEffect(() => {
     fetch("https://badminton-api-j9ja.onrender.com/get_players")
@@ -397,11 +397,11 @@ const CreateGameScreen = ({ players, onBack, setCurrentGame, setOngoingGames }) 
     setPlayerGameCounts(playerGameCount);
   };
 
-  useEffect(() => {
-    if (teams.length === 2 && matchCount > 0) {
-      generateSchedule();
-    }
-  }, [teams, matchCount]);
+  // useEffect(() => {
+  //   if (teams.length === 2 && matchCount > 0) {
+  //     generateSchedule();
+  //   }
+  // }, [teams, matchCount]);
 
   const createGame = async () => {
     const res = await fetch("https://badminton-api-j9ja.onrender.com/create_game", {
