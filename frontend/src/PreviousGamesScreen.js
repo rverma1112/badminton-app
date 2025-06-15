@@ -4,7 +4,7 @@ const PreviousGamesScreen = ({ onBack }) => {
   const [games, setGames] = useState([]);
 
   useEffect(() => {
-  fetch("http://localhost:5000/get_completed_games")
+  fetch("https://badminton-api-j9ja.onrender.com/get_completed_games")
     .then((res) => {
       if (!res.ok) throw new Error("Server error");
       return res.json();

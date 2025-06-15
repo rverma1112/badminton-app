@@ -4,7 +4,7 @@ const OverallRankingScreen = ({ onBack }) => {
   const [rankings, setRankings] = useState([]);
 
   useEffect(() => {
-    fetch("http://localhost:5000/get_rankings")
+    fetch("https://badminton-api-j9ja.onrender.com/get_rankings")
       .then((res) => res.json())
       .then((data) => setRankings(data.rankings || []));
   }, []);

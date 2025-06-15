@@ -16,7 +16,7 @@ const PlayerProfileScreen = ({ onBack }) => {
   const [profile, setProfile] = useState(null);
 
   useEffect(() => {
-    fetch("http://localhost:5000/get_players")
+    fetch("https://badminton-api-j9ja.onrender.com/get_players")
       .then((res) => res.json())
       .then((data) => {
         setPlayers(data);
@@ -26,7 +26,7 @@ const PlayerProfileScreen = ({ onBack }) => {
 
   useEffect(() => {
     if (selectedPlayer) {
-      fetch(`http://localhost:5000/get_player_profile?name=${selectedPlayer}`)
+      fetch(`https://badminton-api-j9ja.onrender.com/get_player_profile?name=${selectedPlayer}`)
         .then((res) => res.json())
         .then((data) => setProfile(data));
     }

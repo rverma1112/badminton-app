@@ -14,14 +14,14 @@ const App = () => {
   const [viewedPlayer, setViewedPlayer] = useState(null);
 
   useEffect(() => {
-    fetch("http://localhost:5000/get_players")
+    fetch("https://badminton-api-j9ja.onrender.com/get_players")
       .then((res) => res.json())
       .then((data) => setPlayers(data));
   }, []);
   const [dailyStats, setDailyStats] = useState([]);
   
   useEffect(() => {
-    fetch("http://localhost:5000/get_ongoing_games")
+    fetch("https://badminton-api-j9ja.onrender.com/get_ongoing_games")
       .then((res) => res.json())
       .then((data) => setOngoingGames(data.games));
   }, []);
@@ -94,7 +94,7 @@ const App = () => {
     statsArray.sort((a, b) => b.pointDifferential - a.pointDifferential);
     const now = new Date().toISOString();
 
-    await fetch("http://localhost:5000/save_stats", {
+    await fetch("https://badminton-api-j9ja.onrender.com/save_stats", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -104,7 +104,7 @@ const App = () => {
       }),
     });
 
-    await fetch("http://localhost:5000/complete_game", {
+    await fetch("https://badminton-api-j9ja.onrender.com/complete_game", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -121,7 +121,7 @@ const App = () => {
     setOngoingGames(prev =>
       Object.values(prev).filter(game => game.id !== currentGame.id)
     );
-    await fetch("http://localhost:5000/end_game", {
+    await fetch("https://badminton-api-j9ja.onrender.com/end_game", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ game_id: currentGame.id }),
@@ -134,7 +134,7 @@ const App = () => {
 
   
   const handleAddPlayer = async (name) => {
-    const res = await fetch("http://localhost:5000/add_player", {
+    const res = await fetch("https://badminton-api-j9ja.onrender.com/add_player", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name }),
@@ -142,7 +142,7 @@ const App = () => {
 
     const data = await res.json();
 
-    const updatedPlayers = await fetch("http://localhost:5000/get_players").then((r) =>
+    const updatedPlayers = await fetch("https://badminton-api-j9ja.onrender.com/get_players").then((r) =>
       r.json()
     );
     setPlayers(updatedPlayers);
@@ -404,7 +404,7 @@ const CreateGameScreen = ({ players, onBack, setCurrentGame, setOngoingGames }) 
   }, [teams, matchCount]);
 
   const createGame = async () => {
-    const res = await fetch("http://localhost:5000/create_game", {
+    const res = await fetch("https://badminton-api-j9ja.onrender.com/create_game", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -420,7 +420,7 @@ const CreateGameScreen = ({ players, onBack, setCurrentGame, setOngoingGames }) 
   
     setCurrentGame(data.game);
   
-    const updatedOngoingGames = await fetch("http://localhost:5000/get_ongoing_games")
+    const updatedOngoingGames = await fetch("https://badminton-api-j9ja.onrender.com/get_ongoing_games")
       .then((res) => res.json());
     setOngoingGames(updatedOngoingGames.games);
   

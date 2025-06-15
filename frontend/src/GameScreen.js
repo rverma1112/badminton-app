@@ -23,7 +23,7 @@ const GameScreen = ({ game, onEndGame }) => {
 
     if (team1Score === "" || team2Score === "") return;
 
-    const res = await fetch("http://localhost:5000/update_match_score", {
+    const res = await fetch("https://badminton-api-j9ja.onrender.com/update_match_score", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
