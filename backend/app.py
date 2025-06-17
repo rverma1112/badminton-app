@@ -1,14 +1,19 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from db import init_db, add_player_to_db, get_all_players_from_db,save_game_to_db,get_overall_rankings
-from db import delete_game
+from db import (
+    init_db, add_player_to_db, get_all_players_from_db,
+    save_game_to_db, get_all_ongoing_games_from_db, save_player_stats,
+    update_match_score, mark_game_as_completed, save_completed_game,
+    get_all_completed_games, get_overall_rankings, get_player_profile,
+    delete_game
+)
 
 import itertools
 import random
 from collections import defaultdict
 import uuid
 from datetime import datetime
-from db import save_completed_game, get_all_completed_games
+
 
 app = Flask(__name__)
 CORS(app)
@@ -99,7 +104,7 @@ def create_game():
 
 
 from flask import Flask, request, jsonify
-from db import save_player_stats  # 👈 import this
+  # 👈 import this
 
 @app.route("/save_stats", methods=["POST"])
 def save_stats():
@@ -112,7 +117,7 @@ def save_stats():
 
     return jsonify({"status": "ok"})
 
-from db import get_all_ongoing_games_from_db
+
 
 @app.route("/get_ongoing_games")
 def get_ongoing_games():
@@ -131,7 +136,7 @@ def complete_game():
 def get_completed_games():
     return jsonify(get_all_completed_games())
 
-from db import mark_game_as_completed
+
 
 @app.route("/end_game", methods=["POST"])
 def end_game():
@@ -149,7 +154,7 @@ def get_rankings():
     rankings = get_overall_rankings()
     return jsonify({"rankings": rankings})
 
-from db import get_player_profile
+
 
 @app.route("/get_player_profile")
 def get_player_profile_route():
@@ -163,7 +168,7 @@ def get_player_profile_route():
 
     return jsonify(profile)
 
-from db import update_match_score
+
 
 @app.route("/update_match_score", methods=["POST"])
 def update_match_score_route():
@@ -177,7 +182,7 @@ def update_match_score_route():
     return jsonify({"status": "ok" if success else "error"})
 
 from flask import Flask, request, jsonify
-from db import delete_game  # ✅ import your function
+  # ✅ import your function
 
 @app.route("/delete_game", methods=["POST"])
 def handle_delete_game():
