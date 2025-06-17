@@ -3,7 +3,7 @@ from flask_cors import CORS
 from db import (
     init_db, add_player_to_db, get_all_players_from_db,
     save_game_to_db, get_all_ongoing_games_from_db, save_player_stats,
-    update_match_score, mark_game_as_completed, save_completed_game,
+    update_match_score, mark_game_as_completed,
     get_all_completed_games, get_overall_rankings, get_player_profile,
     delete_game
 )
