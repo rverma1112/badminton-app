@@ -7,7 +7,7 @@ import json
 import psycopg2
 
 # --- Configuration ---
-DATABASE_URL = "postgresql://postgres:Rv%4096216@db.stnxjphrwhbwhxkggtvs.supabase.co:5432/postgres"
+DATABASE_URL = "postgresql://postgres.stnxjphrwhbwhxkggtvs:Rv%4096216@aws-0-ap-south-1.pooler.supabase.com:6543/postgres"
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
@@ -15,7 +15,7 @@ Base = declarative_base()
 
 # --- Raw psycopg2 connection for manual SQL queries ---
 def get_connection():
-    return psycopg2.connect("dbname=postgres user=postgres password=Rv@96216 host=db.stnxjphrwhbwhxkggtvs.supabase.co port=5432")
+    return psycopg2.connect("dbname=postgres user=postgres.stnxjphrwhbwhxkggtvs password=Rv@96216 host=aws-0-ap-south-1.pooler.supabase.com port=6543 pool_mode:transaction")
 
 # --- Models ---
 class Player(Base):
