@@ -1,19 +1,26 @@
-from sqlalchemy import create_engine, Column, Integer, String, Text, Float, DateTime
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.dialects.postgresql import JSON
 from datetime import datetime
 import json
+import psycopg2
 
+# --- Configuration ---
 DATABASE_URL = "postgresql://postgres:Rv%4096216@db.stnxjphrwhbwhxkggtvs.supabase.co:5432/postgres"
+
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 
+# --- Raw psycopg2 connection for manual SQL queries ---
+def get_connection():
+    return psycopg2.connect("dbname=postgres user=postgres password=Rv@96216 host=db.stnxjphrwhbwhxkggtvs.supabase.co port=5432")
+
 # --- Models ---
 class Player(Base):
     __tablename__ = "players"
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True)
     name = Column(String, unique=True, nullable=False)
 
 class Game(Base):
@@ -49,16 +56,15 @@ class PlayerStats(Base):
     game_id = Column(String)
     created_at = Column(DateTime)
 
-# --- Init ---
+# --- Initialization ---
 def init_db():
     Base.metadata.create_all(bind=engine)
 
-# --- Functions ---
+# --- Core Functions ---
 def add_player_to_db(name):
     db = SessionLocal()
     try:
-        player = Player(name=name)
-        db.add(player)
+        db.add(Player(name=name))
         db.commit()
         return True
     except:
@@ -127,7 +133,7 @@ def mark_game_as_completed(game_id):
 
 def save_completed_game(game_data):
     db = SessionLocal()
-    game = CompletedGame(
+    db.add(CompletedGame(
         id=game_data["id"],
         players=game_data["players"],
         teams=game_data["teams"],
@@ -136,8 +142,7 @@ def save_completed_game(game_data):
         results=game_data["results"],
         created_at=game_data["created_at"],
         ended_at=game_data["ended_at"]
-    )
-    db.add(game)
+    ))
     db.commit()
     db.close()
 
@@ -159,7 +164,7 @@ def get_all_completed_games():
 def save_player_stats(stats, game_id, created_at):
     db = SessionLocal()
     for stat in stats:
-        s = PlayerStats(
+        db.add(PlayerStats(
             player=stat["name"],
             played=stat["played"],
             won=stat["won"],
@@ -167,8 +172,7 @@ def save_player_stats(stats, game_id, created_at):
             point_diff=float(stat["pointDifferential"]),
             game_id=game_id,
             created_at=created_at
-        )
-        db.add(s)
+        ))
     db.commit()
     db.close()
 
@@ -179,3 +183,158 @@ def delete_game(game_id):
     db.query(Game).filter_by(id=game_id).delete()
     db.commit()
     db.close()
+
+# --- Rankings ---
+def get_overall_rankings():
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT player, SUM(played), SUM(won), SUM(lost), SUM(point_diff)
+        FROM player_stats GROUP BY player
+    """)
+    raw_stats = cur.fetchall()
+
+    cur.execute("SELECT matches, results FROM completed_games")
+    games = cur.fetchall()
+    conn.close()
+
+    if not raw_stats:
+        return []
+
+    partner_stats = {}
+    for match_json, result_json in games:
+        matches = json.loads(match_json)
+        results = json.loads(result_json)
+        for match, result in zip(matches, results):
+            t1, t2 = match["team1"], match["team2"]
+            s1, s2 = int(result["team1"]), int(result["team2"])
+            t1_won = s1 > s2
+            def add(p1, p2, won):
+                key = tuple(sorted([p1, p2]))
+                if key not in partner_stats:
+                    partner_stats[key] = [0, 0]
+                if won: partner_stats[key][0] += 1
+                partner_stats[key][1] += 1
+            add(t1[0], t1[1], t1_won)
+            add(t2[0], t2[1], not t1_won)
+
+    player_to_partners = {}
+    for (p1, p2), (wins, total) in partner_stats.items():
+        for a, b in [(p1, p2), (p2, p1)]:
+            player_to_partners.setdefault(a, []).append({
+                "partner": b, "wins": wins, "total": total,
+                "win_pct": round((wins / total) * 100, 2) if total else 0
+            })
+
+    max_played = max(row[1] for row in raw_stats)
+    max_diff = max(abs(row[4]) for row in raw_stats)
+    rankings = []
+
+    for name, played, won, lost, diff in raw_stats:
+        win_rate = (won / played) * 100 if played else 0
+        exp_score = (played / max_played) * 100 if max_played else 0
+        perf_score = ((diff + max_diff) / (2 * max_diff)) * 100 if max_diff else 50
+        rating = round(0.4 * perf_score + 0.3 * win_rate + 0.2 * exp_score, 2)
+        best = worst = None
+        if name in player_to_partners:
+            partners = sorted(
+                [p for p in player_to_partners[name] if p["total"] >= 2],
+                key=lambda x: x["win_pct"],
+                reverse=True
+            )
+            if partners:
+                best = partners[0]
+                worst = partners[-1] if len(partners) > 1 else None
+        rankings.append({
+            "name": name, "played": played, "won": won, "lost": lost,
+            "point_diff": round(diff, 2), "win_rate": round(win_rate, 2),
+            "experience_score": round(exp_score, 2), "performance_score": round(perf_score, 2),
+            "final_rating": rating, "best_partner": best, "worst_partner": worst
+        })
+
+    return sorted(rankings, key=lambda x: x["final_rating"], reverse=True)
+
+# --- Player Profile ---
+def get_player_profile(player_name):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT played, won, lost, point_diff, game_id, created_at
+        FROM player_stats WHERE player = %s ORDER BY created_at
+    """, (player_name,))
+    rows = cur.fetchall()
+
+    if not rows:
+        conn.close()
+        return None
+
+    history = []
+    tp, tw, tl, pd = 0, 0, 0, 0
+    for played, won, lost, point_diff, game_id, created_at in rows:
+        tp += played
+        tw += won
+        tl += lost
+        pd += point_diff
+        wr = (won / played) * 100 if played else 0
+        avg = point_diff / played if played else 0
+        rating = round(0.4 * ((avg + 20) / 40) * 100 + 0.3 * wr + 0.2 * (tp / 100) * 100, 2)
+        history.append({
+            "date": created_at.isoformat(),
+            "rating": rating,
+            "win_rate": round(wr, 2),
+            "point_diff": round(avg, 2)
+        })
+
+    cur.execute("SELECT matches, results FROM completed_games")
+    games = cur.fetchall()
+    conn.close()
+
+    partner_stats, opponent_stats = {}, {}
+    def update(p1, p2, won, target):
+        key = tuple(sorted([p1, p2]))
+        if key not in target:
+            target[key] = [0, 0]
+        if won: target[key][0] += 1
+        target[key][1] += 1
+
+    for m_json, r_json in games:
+        matches, results = json.loads(m_json), json.loads(r_json)
+        for m, r in zip(matches, results):
+            t1, t2 = m["team1"], m["team2"]
+            s1, s2 = int(r["team1"]), int(r["team2"])
+            t1_won = s1 > s2
+            if player_name in t1:
+                team = t1
+                opp = t2
+                won = t1_won
+            elif player_name in t2:
+                team = t2
+                opp = t1
+                won = not t1_won
+            else:
+                continue
+            teammate = [p for p in team if p != player_name][0]
+            update(player_name, teammate, won, partner_stats)
+            for o in opp:
+                update(player_name, o, won, opponent_stats)
+
+    def best_worst(stats):
+        filtered = [(p2, w / t * 100, t) for (p1, p2), (w, t) in stats.items() if p1 == player_name and t >= 2]
+        if not filtered:
+            return None, None
+        best = max(filtered, key=lambda x: x[1])
+        worst = min(filtered, key=lambda x: x[1])
+        return {"name": best[0], "win_pct": round(best[1], 2)}, {"name": worst[0], "win_pct": round(worst[1], 2)}
+
+    best_p, worst_p = best_worst(partner_stats)
+    best_o, worst_o = best_worst(opponent_stats)
+
+    return {
+        "name": player_name,
+        "played": tp, "won": tw, "lost": tl,
+        "win_rate": round((tw / tp) * 100, 2),
+        "avg_point_diff": round(pd / tp, 2),
+        "rating_progression": history,
+        "best_partner": best_p, "worst_partner": worst_p,
+        "favourite_opponent": best_o, "least_favourite_opponent": worst_o
+    }
