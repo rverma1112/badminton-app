@@ -131,8 +131,10 @@ def mark_game_as_completed(game_id):
         db.commit()
     db.close()
 
-def save_completed_game(game_data):
+def save_completed_game_and_stats(game_data, stats):
     db = SessionLocal()
+
+    # Save completed game
     db.add(CompletedGame(
         id=game_data["id"],
         players=game_data["players"],
@@ -143,8 +145,22 @@ def save_completed_game(game_data):
         created_at=game_data["created_at"],
         ended_at=game_data["ended_at"]
     ))
+
+    # Save player stats
+    for stat in stats:
+        db.add(PlayerStats(
+            player=stat["name"],
+            played=stat["played"],
+            won=stat["won"],
+            lost=stat["lost"],
+            point_diff=float(stat["pointDifferential"]),
+            game_id=game_data["id"],
+            created_at=game_data["created_at"]
+        ))
+
     db.commit()
     db.close()
+
 
 def get_all_completed_games():
     db = SessionLocal()

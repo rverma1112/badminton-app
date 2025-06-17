@@ -124,11 +124,17 @@ def get_ongoing_games():
     games = get_all_ongoing_games_from_db()
     return jsonify({"games": games})
 
+from db import save_completed_game_and_stats
+
 @app.route("/complete_game", methods=["POST"])
 def complete_game():
     data = request.get_json()
-    save_completed_game(data)
-    ongoing_games.pop(data["id"], None)
+    stats = data.get("stats", [])
+
+    if not stats:
+        return jsonify({"status": "error", "message": "Missing stats"}), 400
+
+    save_completed_game_and_stats(data, stats)
     return jsonify({ "status": "ok" })
 
 
