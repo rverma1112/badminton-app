@@ -128,14 +128,19 @@ from db import save_completed_game_and_stats
 
 @app.route("/complete_game", methods=["POST"])
 def complete_game():
-    data = request.get_json()
-    stats = data.get("stats", [])
+    try:
+        data = request.get_json()
+        stats = data.get("stats", [])
+        print("Stats received in /complete_game:", stats)
 
-    if not stats:
-        return jsonify({"status": "error", "message": "Missing stats"}), 400
+        if not stats:
+            return jsonify({"status": "error", "message": "Missing stats"}), 400
 
-    save_completed_game_and_stats(data, stats)
-    return jsonify({ "status": "ok" })
+        save_completed_game_and_stats(data, stats)
+        return jsonify({ "status": "ok" })
+    except Exception as e:
+        print("Error in /complete_game:", e)
+        return jsonify({ "status": "error", "message": str(e) }), 500
 
 
 @app.route("/get_completed_games")

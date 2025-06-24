@@ -95,15 +95,15 @@ const App = () => {
     statsArray.sort((a, b) => b.pointDifferential - a.pointDifferential);
     const now = new Date().toISOString();
 
-    await fetch("https://badminton-api-j9ja.onrender.com/save_stats", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        stats: statsArray,
-        game_id: currentGame.id,
-        created_at: now,
-      }),
-    });
+    // await fetch("https://badminton-api-j9ja.onrender.com/save_stats", {
+    //   method: "POST",
+    //   headers: { "Content-Type": "application/json" },
+    //   body: JSON.stringify({
+    //     stats: statsArray,
+    //     game_id: currentGame.id,
+    //     created_at: now,
+    //   }),
+    // });
 
     await fetch("https://badminton-api-j9ja.onrender.com/complete_game", {
       method: "POST",
@@ -117,7 +117,7 @@ const App = () => {
         results: scores,
         created_at: currentGame.created_at,
         ended_at: new Date().toISOString(),
-        stats: statsArray, // ✅ ADD THIS LINE
+        stats: statsArray, // ✅ Add this line
       }),
     });
 
