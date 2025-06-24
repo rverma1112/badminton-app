@@ -117,8 +117,10 @@ const App = () => {
         results: scores,
         created_at: currentGame.created_at,
         ended_at: new Date().toISOString(),
+        stats: statsArray, // ✅ ADD THIS LINE
       }),
     });
+
     setOngoingGames(prev =>
       Object.values(prev).filter(game => game.id !== currentGame.id)
     );
