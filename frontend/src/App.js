@@ -93,7 +93,7 @@ const App = () => {
 
     // Sort by point differential
     statsArray.sort((a, b) => b.pointDifferential - a.pointDifferential);
-    const now = new Date().toISOString();
+    //const now = new Date().toISOString();
 
     // await fetch("https://badminton-api-j9ja.onrender.com/save_stats", {
     //   method: "POST",
