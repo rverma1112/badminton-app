@@ -133,33 +133,37 @@ def mark_game_as_completed(game_id):
 
 def save_completed_game_and_stats(game_data, stats):
     db = SessionLocal()
-
-    # Save completed game
-    db.add(CompletedGame(
-        id=game_data["id"],
-        players=game_data["players"],
-        teams=game_data["teams"],
-        match_count=game_data["match_count"],
-        matches=game_data["matches"],
-        results=game_data["results"],
-        created_at=game_data["created_at"],
-        ended_at=game_data["ended_at"]
-    ))
-
-    # Save player stats
-    for stat in stats:
-        db.add(PlayerStats(
-            player=stat["name"],
-            played=stat["played"],
-            won=stat["won"],
-            lost=stat["lost"],
-            point_diff=float(stat["pointDifferential"]),
-            game_id=game_data["id"],
-            created_at=game_data["created_at"]
+    try:
+        db.add(CompletedGame(
+            id=str(game_data["id"]),  # ✅ ensure string
+            players=game_data["players"],
+            teams=game_data["teams"],
+            match_count=game_data["match_count"],
+            matches=game_data["matches"],
+            results=game_data["results"],
+            created_at=game_data["created_at"],
+            ended_at=game_data["ended_at"]
         ))
 
-    db.commit()
-    db.close()
+        for stat in stats:
+            db.add(PlayerStats(
+                player=stat["name"],
+                played=stat["played"],
+                won=stat["won"],
+                lost=stat["lost"],
+                point_diff=float(stat.get("pointDifferential", 0)),
+                game_id=str(game_data["id"]),  # ✅ ensure string
+                created_at=game_data["created_at"]
+            ))
+
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print("🔥 Error in save_completed_game_and_stats:", e)
+        raise
+    finally:
+        db.close()
+
 
 
 def get_all_completed_games():

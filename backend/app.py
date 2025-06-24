@@ -131,16 +131,18 @@ def complete_game():
     try:
         data = request.get_json()
         stats = data.get("stats", [])
-        print("Stats received in /complete_game:", stats)
+
+        print("🚨 /complete_game payload:", data)
 
         if not stats:
             return jsonify({"status": "error", "message": "Missing stats"}), 400
 
         save_completed_game_and_stats(data, stats)
-        return jsonify({ "status": "ok" })
+        return jsonify({"status": "ok"})
     except Exception as e:
-        print("Error in /complete_game:", e)
-        return jsonify({ "status": "error", "message": str(e) }), 500
+        print("🔥 Error in /complete_game:", e)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 
 
 @app.route("/get_completed_games")
