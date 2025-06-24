@@ -53,7 +53,7 @@ class PlayerStats(Base):
     won = Column(Integer)
     lost = Column(Integer)
     point_diff = Column(Float)
-    game_id = Column(String)
+    game_id = Column(Integer)
     created_at = Column(DateTime)
 
 # --- Initialization ---
