@@ -36,7 +36,7 @@ class Game(Base):
 
 class CompletedGame(Base):
     __tablename__ = "completed_games"
-    id = Column(String, primary_key=True)
+    id = Column(Integer, primary_key=True)
     players = Column(JSON)
     teams = Column(JSON)
     match_count = Column(Integer)
@@ -135,7 +135,7 @@ def save_completed_game_and_stats(game_data, stats):
     db = SessionLocal()
     try:
         db.add(CompletedGame(
-            id=str(game_data["id"]),  # ✅ ensure string
+            id=game_data["id"],  # ✅ use as integer
             players=game_data["players"],
             teams=game_data["teams"],
             match_count=game_data["match_count"],
@@ -152,7 +152,7 @@ def save_completed_game_and_stats(game_data, stats):
                 won=stat["won"],
                 lost=stat["lost"],
                 point_diff=float(stat.get("pointDifferential", 0)),
-                game_id=str(game_data["id"]),  # ✅ ensure string
+                game_id=game_data["id"],  # ✅ ensure string
                 created_at=game_data["created_at"]
             ))
 

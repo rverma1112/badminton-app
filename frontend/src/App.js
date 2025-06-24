@@ -109,7 +109,7 @@ const App = () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        id: String(currentGame.id),
+        id: currentGame.id,
         players: currentGame.players,
         teams: currentGame.teams,
         match_count: currentGame.match_count,
