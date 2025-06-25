@@ -227,7 +227,7 @@ def get_overall_rankings():
     if not raw_stats:
         return []
 
-    # Build partner stats
+    # Partner win% logic
     partner_stats = {}
     for matches, results in games:
         if not matches or not results:
@@ -258,28 +258,35 @@ def get_overall_rankings():
                 "win_pct": round((wins / total) * 100, 2) if total else 0
             })
 
-    # Normalize experience and performance
+    # Normalize performance, win%, experience
     max_played = max(row[1] for row in raw_stats)
     diffs = [row[4] for row in raw_stats]
     min_diff = min(diffs)
     max_diff = max(diffs)
+    raw_win_rates = [(row[0], (row[2] / row[1]) * 100 if row[1] else 0) for row in raw_stats]
+    max_win_rate = max(w for _, w in raw_win_rates)
+    name_to_win_rate = dict(raw_win_rates)
 
     rankings = []
 
     for name, played, won, lost, diff in raw_stats:
-        win_rate = (won / played) * 100 if played else 0
+        # Normalized Experience
         exp_score = (played / max_played) * 100 if max_played else 0
 
+        # Normalized Performance
         if max_diff != min_diff:
             perf_score = ((diff - min_diff) / (max_diff - min_diff)) * 100
         else:
             perf_score = 50
 
-        rating = round(
-            0.4 * perf_score + 0.3 * win_rate + 0.2 * exp_score,
-            2
-        )
+        # Normalized Win Rate
+        raw_win = name_to_win_rate[name]
+        win_score = (raw_win / max_win_rate) * 100 if max_win_rate else 0
 
+        # Final Rating
+        rating = round(0.4 * perf_score + 0.3 * win_score + 0.2 * exp_score, 2)
+
+        # Optional partner stats
         best = worst = None
         if name in player_to_partners:
             partners = sorted(
@@ -292,9 +299,12 @@ def get_overall_rankings():
                 worst = partners[-1] if len(partners) > 1 else None
 
         rankings.append({
-            "name": name, "played": played, "won": won, "lost": lost,
+            "name": name,
+            "played": played,
+            "won": won,
+            "lost": lost,
             "point_diff": round(diff, 2),
-            "win_rate": round(win_rate, 2),
+            "win_score": round(win_score, 2),
             "experience_score": round(exp_score, 2),
             "performance_score": round(perf_score, 2),
             "final_rating": rating,
