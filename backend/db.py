@@ -262,7 +262,7 @@ def get_overall_rankings():
         win_rate = (won / played) * 100 if played else 0
         exp_score = (played / max_played) * 100 if max_played else 0
         perf_score = ((diff + max_diff) / (2 * max_diff)) * 100 if max_diff else 50
-        rating = round(0.4 * perf_score + 0.3 * win_rate + 0.2 * exp_score, 2)
+        rating = round(0.45 * perf_score + 0.35 * win_rate + 0.2 * exp_score, 2)
         best = worst = None
         if name in player_to_partners:
             partners = sorted(
