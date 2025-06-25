@@ -229,9 +229,10 @@ def get_overall_rankings():
         return []
 
     partner_stats = {}
-    for match_json, result_json in games:
-        matches = json.loads(match_json)
-        results = json.loads(result_json)
+    for matches, results in games:  # ✅ Already Python lists
+        if not matches or not results:
+            continue
+
         for match, result in zip(matches, results):
             t1, t2 = match["team1"], match["team2"]
             s1, s2 = int(result["team1"]), int(result["team2"])
