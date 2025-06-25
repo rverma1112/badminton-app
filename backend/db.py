@@ -282,7 +282,6 @@ def get_overall_rankings():
 
     return sorted(rankings, key=lambda x: x["final_rating"], reverse=True)
 
-# --- Player Profile ---
 def get_player_profile(player_name):
     conn = get_connection()
     cur = conn.cursor()
@@ -296,8 +295,6 @@ def get_player_profile(player_name):
         conn.close()
         return None
 
-    # history = []
-    # tp, tw, tl, pd = 0, 0, 0, 0
     history = []
     tp, tw, tl, pd = 0, 0, 0, 0
     for played, won, lost, point_diff, game_id, created_at in rows:
@@ -322,15 +319,18 @@ def get_player_profile(player_name):
     conn.close()
 
     partner_stats, opponent_stats = {}, {}
+
     def update(p1, p2, won, target):
         key = tuple(sorted([p1, p2]))
         if key not in target:
             target[key] = [0, 0]
-        if won: target[key][0] += 1
+        if won:
+            target[key][0] += 1
         target[key][1] += 1
 
-    for m_json, r_json in games:
-        matches, results = json.loads(m_json), json.loads(r_json)
+    for matches, results in games:  # ✅ already lists, no json.loads needed
+        if not matches or not results:
+            continue
         for m, r in zip(matches, results):
             t1, t2 = m["team1"], m["team2"]
             s1, s2 = int(r["team1"]), int(r["team2"])
@@ -363,10 +363,14 @@ def get_player_profile(player_name):
 
     return {
         "name": player_name,
-        "played": tp, "won": tw, "lost": tl,
+        "played": tp,
+        "won": tw,
+        "lost": tl,
         "win_rate": round((tw / tp) * 100, 2),
         "avg_point_diff": round(pd / tp, 2),
         "rating_progression": history,
-        "best_partner": best_p, "worst_partner": worst_p,
-        "favourite_opponent": best_o, "least_favourite_opponent": worst_o
+        "best_partner": best_p,
+        "worst_partner": worst_p,
+        "favourite_opponent": best_o,
+        "least_favourite_opponent": worst_o
     }
