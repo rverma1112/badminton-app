@@ -281,6 +281,8 @@ def get_overall_rankings():
 
         # Normalized Win Rate
         raw_win = name_to_win_rate[name]
+        win_rate = round(raw_win, 2)
+        win_score = (raw_win / max_win_rate) * 100 if max_win_rate else 0
         win_score = (raw_win / max_win_rate) * 100 if max_win_rate else 0
 
         # Final Rating
