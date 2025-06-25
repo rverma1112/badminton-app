@@ -284,7 +284,7 @@ def get_overall_rankings():
         win_score = (raw_win / max_win_rate) * 100 if max_win_rate else 0
 
         # Final Rating
-        rating = round(0.4 * perf_score + 0.3 * win_score + 0.2 * exp_score, 2)
+        rating = round(0.35 * perf_score + 0.45 * win_score + 0.2 * exp_score, 2)
 
         # Optional partner stats
         best = worst = None
