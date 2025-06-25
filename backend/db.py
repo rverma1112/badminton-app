@@ -306,6 +306,7 @@ def get_overall_rankings():
             "won": won,
             "lost": lost,
             "point_diff": round(diff, 2),
+            "win_rate": win_rate,  # ✅ add this
             "win_score": round(win_score, 2),
             "experience_score": round(exp_score, 2),
             "performance_score": round(perf_score, 2),
@@ -313,6 +314,7 @@ def get_overall_rankings():
             "best_partner": best,
             "worst_partner": worst
         })
+
 
     return sorted(rankings, key=lambda x: x["final_rating"], reverse=True)
 
