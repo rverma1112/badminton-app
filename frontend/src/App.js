@@ -157,45 +157,47 @@ const App = () => {
     switch (screen) {
       case "home":
         return (
-          <div className="card">
-            <h2>🏸 Badminton Match Manager</h2>
-            <button onClick={() => setScreen("newGame")}>➕ Create New Game</button>
-            <button onClick={() => setScreen("addPlayer")}>🧑 Add New Player</button>
-            <button onClick={() => setScreen("games")}>📋 View Previous Games</button>
-            <button onClick={() => setScreen("rankings")}>🏆 View Rankings</button>
-            <button onClick={() => setScreen("profile")}>👤 View Player Profile</button>
+          <div className="home-screen" style={{ padding: "2rem" }}>
+            <h2 style={{ fontSize: "2rem", marginBottom: "1.5rem", textAlign: "center" }}>
+              🏸 <span style={{ color: "#007BFF" }}>Badminton Match Manager</span>
+            </h2>
+
+            <div style={{ display: "grid", gap: "1rem" }}>
+              <button className="primary-button" onClick={() => setScreen("newGame")}>➕ Create New Game</button>
+              <button className="primary-button" onClick={() => setScreen("addPlayer")}>🧑 Add New Player</button>
+              <button className="primary-button" onClick={() => setScreen("games")}>📋 View Previous Games</button>
+              <button className="primary-button" onClick={() => setScreen("rankings")}>🏆 View Rankings</button>
+              <button className="primary-button" onClick={() => setScreen("profile")}>👤 View Player Profile</button>
+            </div>
 
             {ongoingGames.length > 0 && (
-            <div style={{ marginTop: "1rem" }}>
-              <h3>🟢 Ongoing Games</h3>
-              {ongoingGames.map((game) => (
-                <div
-                  key={game.id}
-                  style={{
-                    marginBottom: "10px",
-                    padding: "10px",
+              <div style={{ marginTop: "2rem" }}>
+                <h3 style={{ color: "#28a745" }}>🟢 Ongoing Games</h3>
+                {ongoingGames.map((game) => (
+                  <div key={game.id} style={{
+                    marginBottom: "1rem",
+                    padding: "1rem",
                     border: "1px solid #ccc",
-                    borderRadius: "5px",
-                    background: "#f9f9f9",
-                    cursor: "pointer",
+                    borderRadius: "10px",
+                    background: "#f8f9fa",
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
                   }}
                   onClick={() => {
                     setCurrentGame(game);
                     setScreen("game");
-                  }}
-                >
-                  <p><strong>Game #{game.id}</strong></p>
-                  <p>Players: {game.players.join(", ")}</p>
-                  <p>Matches: {game.matches?.length ?? 0}</p>
-                  <p style={{ fontSize: "12px", color: "#888" }}>
-                    Created At: {new Date(game.created_at).toLocaleString()}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-
+                  }}>
+                    <strong>Game #{game.id}</strong>
+                    <p>Players: {game.players.join(", ")}</p>
+                    <p>Matches: {game.matches?.length ?? 0}</p>
+                    <p style={{ fontSize: "0.9rem", color: "#888" }}>
+                      Created At: {new Date(game.created_at).toLocaleString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
+
         );
 
 
