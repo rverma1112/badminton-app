@@ -347,13 +347,11 @@ const AddPlayerScreen = ({ onBack, onAddPlayer }) => {
 
 // 🔸 CreateGameScreen Component
 const CreateGameScreen = ({ players, onBack, setCurrentGame, setOngoingGames }) => {
-
   const [selectedPlayers, setSelectedPlayers] = useState([]);
   const [matchCount, setMatchCount] = useState(3);
   const [teams, setTeams] = useState([]);
   const [schedule, setSchedule] = useState([]);
   const [playerGameCounts, setPlayerGameCounts] = useState({});
-
 
   const togglePlayer = (name) => {
     setSelectedPlayers((prev) =>
@@ -372,39 +370,32 @@ const CreateGameScreen = ({ players, onBack, setCurrentGame, setOngoingGames }) 
   };
 
   const generateSchedule = () => {
-  const [team1, team2] = teams;
-
-  if (team1.length < 2 || team2.length < 2) {
-    alert("Each team must have at least 2 players to generate valid matches.");
-    return;
-  }
-
-  const playerGameCount = {};
-  const newSchedule = [];
-
-  [...team1, ...team2].forEach((p) => (playerGameCount[p] = 0));
-
-  for (let m = 0; m < matchCount; m++) {
-    const sortedTeam1 = [...team1].sort((a, b) => playerGameCount[a] - playerGameCount[b]);
-    const sortedTeam2 = [...team2].sort((a, b) => playerGameCount[a] - playerGameCount[b]);
-
-    const pair1 = sortedTeam1.slice(0, 2).sort(() => Math.random() - 0.5);
-    const pair2 = sortedTeam2.slice(0, 2).sort(() => Math.random() - 0.5);
-
-    if (pair1.length < 2 || pair2.length < 2) {
-      alert("Not enough players to create fair teams.");
+    const [team1, team2] = teams;
+    if (team1.length < 2 || team2.length < 2) {
+      alert("Each team must have at least 2 players.");
       return;
     }
 
-    newSchedule.push({ team1: pair1, team2: pair2 });
+    const playerGameCount = {};
+    const newSchedule = [];
+    [...team1, ...team2].forEach((p) => (playerGameCount[p] = 0));
 
-    [...pair1, ...pair2].forEach((p) => (playerGameCount[p] += 1));
-  }
+    for (let m = 0; m < matchCount; m++) {
+      const sortedTeam1 = [...team1].sort((a, b) => playerGameCount[a] - playerGameCount[b]);
+      const sortedTeam2 = [...team2].sort((a, b) => playerGameCount[a] - playerGameCount[b]);
 
-  setSchedule(newSchedule);
-  setPlayerGameCounts(playerGameCount);
-};
+      const pair1 = sortedTeam1.slice(0, 2).sort(() => Math.random() - 0.5);
+      const pair2 = sortedTeam2.slice(0, 2).sort(() => Math.random() - 0.5);
 
+      if (pair1.length < 2 || pair2.length < 2) return;
+
+      newSchedule.push({ team1: pair1, team2: pair2 });
+      [...pair1, ...pair2].forEach((p) => playerGameCount[p]++);
+    }
+
+    setSchedule(newSchedule);
+    setPlayerGameCounts(playerGameCount);
+  };
 
   const createGame = async () => {
     const res = await fetch("https://badminton-api-j9ja.onrender.com/create_game", {
@@ -417,98 +408,70 @@ const CreateGameScreen = ({ players, onBack, setCurrentGame, setOngoingGames }) 
         matches: schedule,
       }),
     });
-  
     const data = await res.json();
-    alert("Game created! 🎉");
-  
+    alert("✅ Game created!");
+
     setCurrentGame(data.game);
-  
+
     const updatedOngoingGames = await fetch("https://badminton-api-j9ja.onrender.com/get_ongoing_games")
       .then((res) => res.json());
     setOngoingGames(updatedOngoingGames.games);
-  
     onBack();
   };
-  
-  
 
   return (
-    <div>
-      <h2>Create Game</h2>
+    <div style={{ padding: "2rem", maxWidth: "700px", margin: "0 auto" }}>
+      <h2 style={{ textAlign: "center" }}>🎮 Create New Game</h2>
 
-      <div>
-        <p>Select Players:</p>
-        {players.map((player) => (
-          <button
-            key={player}
-            onClick={() => togglePlayer(player)}
-            style={{
-              background: selectedPlayers.includes(player) ? "green" : "gray",
-              color: "white",
-              margin: "5px",
-              padding: "5px 10px",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer",
-            }}
-          >
-            {player}
-          </button>
-        ))}
+      <div style={{ margin: "1rem 0" }}>
+        <label style={{ fontWeight: "bold" }}>Select Players:</label>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "0.5rem" }}>
+          {players.map((player) => (
+            <button
+              key={player}
+              onClick={() => togglePlayer(player)}
+              style={{
+                padding: "8px 12px",
+                borderRadius: "6px",
+                border: "none",
+                backgroundColor: selectedPlayers.includes(player) ? "#28a745" : "#6c757d",
+                color: "white",
+                cursor: "pointer",
+              }}
+            >
+              {player}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div style={{ marginTop: "1rem" }}>
-        <label>Total Matches: </label>
+      <div style={{ margin: "1rem 0" }}>
+        <label style={{ fontWeight: "bold" }}>Total Matches:</label>
         <input
           type="number"
           value={matchCount}
           onChange={(e) => setMatchCount(parseInt(e.target.value))}
           min="1"
-          style={{ marginLeft: "10px", padding: "5px", width: "60px" }}
+          style={{ padding: "8px", width: "80px", marginLeft: "10px", borderRadius: "5px" }}
         />
       </div>
 
-      <div style={{ marginTop: "1rem" }}>
-        <button
-          onClick={generateTeams}
-          style={{
-            padding: "10px",
-            backgroundColor: "orange",
-            color: "white",
-            border: "none",
-            borderRadius: "5px",
-            cursor: "pointer",
-          }}
-        >
-          🎲 Random Team Distribution
-        </button>
+      <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginTop: "1rem" }}>
+        <button className="primary-button" onClick={generateTeams}>🎲 Generate Teams</button>
+        <button className="primary-button" onClick={generateSchedule}>📅 Generate Schedule</button>
       </div>
 
       {teams.length === 2 && (
-        <div style={{ marginTop: "1rem" }}>
-          <h4>Team 1: {teams[0].join(", ")}</h4>
-          <h4>Team 2: {teams[1].join(", ")}</h4>
+        <div style={{ marginTop: "1.5rem" }}>
+          <h4>🏁 Teams</h4>
+          <p><strong>Team 1:</strong> {teams[0].join(", ")}</p>
+          <p><strong>Team 2:</strong> {teams[1].join(", ")}</p>
         </div>
       )}
-      <div style={{ marginTop: "1rem" }}>
-          <button
-      onClick={generateSchedule}
-      style={{
-        padding: "10px",
-        backgroundColor: "#17a2b8",
-        color: "white",
-        border: "none",
-        borderRadius: "5px",
-        marginTop: "1rem",
-        cursor: "pointer"
-      }}
-    >
-      📅 Generate Schedule
-    </button>
-</div>
+
       {schedule.length > 0 && (
-        <div style={{ marginTop: "1rem" }}>
-          <h3>🔁 Match Schedule Preview</h3>
+        <div style={{ marginTop: "1.5rem" }}>
+          <h4>📋 Match Schedule</h4>
           <ol>
             {schedule.map((match, idx) => (
               <li key={idx}>
@@ -517,47 +480,35 @@ const CreateGameScreen = ({ players, onBack, setCurrentGame, setOngoingGames }) 
             ))}
           </ol>
 
-          <h4>📊 Player Match Counts</h4>
+          <h4>📊 Player Game Counts</h4>
           <ul>
             {Object.entries(playerGameCounts).map(([player, count]) => (
-              <li key={player}>
-                {player}: {count} game{count > 1 ? "s" : ""}
-              </li>
+              <li key={player}>{player}: {count} game{count > 1 ? "s" : ""}</li>
             ))}
           </ul>
         </div>
       )}
 
-      <button
-        onClick={createGame}
-        style={{
-          marginTop: "1rem",
-          padding: "10px",
-          background: "blue",
-          color: "white",
-          border: "none",
-          borderRadius: "5px",
-        }}
-      >
-        ✅ Create Game
-      </button>
-
-      <br />
-      <button
-        onClick={onBack}
-        style={{
-          marginTop: "1rem",
-          padding: "8px 16px",
-          backgroundColor: "gray",
-          color: "white",
-          border: "none",
-          borderRadius: "5px",
-        }}
-      >
-        🔙 Back
-      </button>
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: "2rem" }}>
+        <button className="primary-button" onClick={createGame}>✅ Start Game</button>
+        <button
+          onClick={onBack}
+          style={{
+            padding: "10px 16px",
+            backgroundColor: "#6c757d",
+            color: "white",
+            border: "none",
+            borderRadius: "6px",
+            fontWeight: "bold",
+            cursor: "pointer",
+          }}
+        >
+          🔙 Back
+        </button>
+      </div>
     </div>
   );
 };
+
 
 export default App;
