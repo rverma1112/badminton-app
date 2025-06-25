@@ -241,21 +241,18 @@ const AddPlayerScreen = ({ onBack, onAddPlayer }) => {
   const [count, setCount] = useState(1);
   const [names, setNames] = useState([""]);
 
-  // Handle player count change
   const handleCountChange = (e) => {
     const newCount = Math.max(1, parseInt(e.target.value) || 1);
     setCount(newCount);
-    setNames(Array(newCount).fill("")); // reset names array
+    setNames(Array(newCount).fill(""));
   };
 
-  // Handle individual name change
   const handleNameChange = (index, value) => {
     const updated = [...names];
     updated[index] = value;
     setNames(updated);
   };
 
-  // Add all players to DB
   const submitPlayers = async () => {
     const trimmed = names.map((n) => n.trim()).filter(Boolean);
     if (trimmed.length !== count) {
@@ -276,71 +273,76 @@ const AddPlayerScreen = ({ onBack, onAddPlayer }) => {
   };
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h2>Add Multiple Players</h2>
+    <div style={{ padding: "2rem", maxWidth: "500px", margin: "0 auto" }}>
+      <h2 style={{ marginBottom: "1rem", textAlign: "center" }}>➕ Add Players</h2>
 
-      <label>Number of players to add:</label>
+      <label style={{ display: "block", marginBottom: "0.5rem" }}>
+        Number of players:
+      </label>
       <input
         type="number"
         value={count}
         onChange={handleCountChange}
         min="1"
         max="50"
-        style={{ padding: "8px", width: "60px", marginLeft: "10px" }}
+        style={{
+          padding: "10px",
+          width: "80px",
+          border: "1px solid #ccc",
+          borderRadius: "6px",
+          marginBottom: "1.5rem",
+        }}
       />
 
-      <div style={{ marginTop: "1rem" }}>
+      <div style={{ marginBottom: "2rem" }}>
         {names.map((name, i) => (
-          <div key={i} style={{ marginBottom: "10px" }}>
-            <input
-              type="text"
-              value={name}
-              placeholder={`Player ${i + 1} name`}
-              onChange={(e) => handleNameChange(i, e.target.value)}
-              style={{
-                padding: "8px",
-                width: "250px",
-                borderRadius: "6px",
-                border: "1px solid #ccc",
-              }}
-            />
-          </div>
+          <input
+            key={i}
+            type="text"
+            value={name}
+            placeholder={`Player ${i + 1} name`}
+            onChange={(e) => handleNameChange(i, e.target.value)}
+            style={{
+              padding: "10px",
+              width: "100%",
+              marginBottom: "10px",
+              borderRadius: "6px",
+              border: "1px solid #ccc",
+              boxSizing: "border-box",
+            }}
+          />
         ))}
       </div>
 
-      <button
-        onClick={submitPlayers}
-        style={{
-          padding: "10px 16px",
-          backgroundColor: "green",
-          color: "white",
-          border: "none",
-          borderRadius: "6px",
-          marginTop: "1rem",
-          cursor: "pointer",
-          fontWeight: "bold"
-        }}
-      >
-        ➕ Add Players
-      </button>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem" }}>
+        <button
+          onClick={submitPlayers}
+          className="primary-button"
+          style={{ flex: 1 }}
+        >
+          ➕ Add Players
+        </button>
 
-      <br />
-      <br />
-      <button
-        onClick={onBack}
-        style={{
-          padding: "8px 16px",
-          backgroundColor: "gray",
-          color: "white",
-          border: "none",
-          borderRadius: "5px",
-        }}
-      >
-        🔙 Back
-      </button>
+        <button
+          onClick={onBack}
+          style={{
+            padding: "10px",
+            backgroundColor: "#6c757d",
+            color: "white",
+            border: "none",
+            borderRadius: "6px",
+            fontWeight: "bold",
+            flex: 1,
+            cursor: "pointer",
+          }}
+        >
+          🔙 Back
+        </button>
+      </div>
     </div>
   );
 };
+
 
 
 // 🔸 CreateGameScreen Component
