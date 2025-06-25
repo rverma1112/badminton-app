@@ -211,7 +211,6 @@ def delete_game(game_id):
     db.commit()
     db.close()
 
-# --- Rankings ---
 def get_overall_rankings():
     conn = get_connection()
     cur = conn.cursor()
@@ -228,23 +227,28 @@ def get_overall_rankings():
     if not raw_stats:
         return []
 
+    # Build partner stats
     partner_stats = {}
-    for matches, results in games:  # ✅ Already Python lists
+    for matches, results in games:
         if not matches or not results:
             continue
-
         for match, result in zip(matches, results):
             t1, t2 = match["team1"], match["team2"]
             s1, s2 = int(result["team1"]), int(result["team2"])
             t1_won = s1 > s2
+
             def add(p1, p2, won):
                 key = tuple(sorted([p1, p2]))
                 if key not in partner_stats:
                     partner_stats[key] = [0, 0]
-                if won: partner_stats[key][0] += 1
+                if won:
+                    partner_stats[key][0] += 1
                 partner_stats[key][1] += 1
-            add(t1[0], t1[1], t1_won)
-            add(t2[0], t2[1], not t1_won)
+
+            if len(t1) == 2:
+                add(t1[0], t1[1], t1_won)
+            if len(t2) == 2:
+                add(t2[0], t2[1], not t1_won)
 
     player_to_partners = {}
     for (p1, p2), (wins, total) in partner_stats.items():
@@ -254,15 +258,28 @@ def get_overall_rankings():
                 "win_pct": round((wins / total) * 100, 2) if total else 0
             })
 
+    # Normalize experience and performance
     max_played = max(row[1] for row in raw_stats)
-    max_diff = max(abs(row[4]) for row in raw_stats)
+    diffs = [row[4] for row in raw_stats]
+    min_diff = min(diffs)
+    max_diff = max(diffs)
+
     rankings = []
 
     for name, played, won, lost, diff in raw_stats:
         win_rate = (won / played) * 100 if played else 0
         exp_score = (played / max_played) * 100 if max_played else 0
-        perf_score = ((diff + max_diff) / (2 * max_diff)) * 100 if max_diff else 50
-        rating = round(0.45 * perf_score + 0.35 * win_rate + 0.2 * exp_score, 2)
+
+        if max_diff != min_diff:
+            perf_score = ((diff - min_diff) / (max_diff - min_diff)) * 100
+        else:
+            perf_score = 50
+
+        rating = round(
+            0.4 * perf_score + 0.3 * win_rate + 0.2 * exp_score,
+            2
+        )
+
         best = worst = None
         if name in player_to_partners:
             partners = sorted(
@@ -273,14 +290,20 @@ def get_overall_rankings():
             if partners:
                 best = partners[0]
                 worst = partners[-1] if len(partners) > 1 else None
+
         rankings.append({
             "name": name, "played": played, "won": won, "lost": lost,
-            "point_diff": round(diff, 2), "win_rate": round(win_rate, 2),
-            "experience_score": round(exp_score, 2), "performance_score": round(perf_score, 2),
-            "final_rating": rating, "best_partner": best, "worst_partner": worst
+            "point_diff": round(diff, 2),
+            "win_rate": round(win_rate, 2),
+            "experience_score": round(exp_score, 2),
+            "performance_score": round(perf_score, 2),
+            "final_rating": rating,
+            "best_partner": best,
+            "worst_partner": worst
         })
 
     return sorted(rankings, key=lambda x: x["final_rating"], reverse=True)
+
 
 def get_player_profile(player_name):
     conn = get_connection()
