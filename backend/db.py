@@ -288,9 +288,13 @@ def get_player_profile(player_name):
         conn.close()
         return None
 
+    # history = []
+    # tp, tw, tl, pd = 0, 0, 0, 0
     history = []
     tp, tw, tl, pd = 0, 0, 0, 0
     for played, won, lost, point_diff, game_id, created_at in rows:
+        if isinstance(created_at, str):
+            created_at = datetime.fromisoformat(created_at)
         tp += played
         tw += won
         tl += lost

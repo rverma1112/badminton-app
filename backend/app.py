@@ -164,22 +164,29 @@ def end_game():
 
 @app.route("/get_rankings")
 def get_rankings():
-    rankings = get_overall_rankings()
-    return jsonify({"rankings": rankings})
-
+    try:
+        rankings = get_overall_rankings()
+        return jsonify({"rankings": rankings})
+    except Exception as e:
+        print("🔥 ERROR in /get_rankings:", e)
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/get_player_profile")
 def get_player_profile_route():
-    player_name = request.args.get("name")
-    if not player_name:
-        return jsonify({"error": "Missing player name"}), 400
+    try:
+        player_name = request.args.get("name")
+        if not player_name:
+            return jsonify({"error": "Missing player name"}), 400
 
-    profile = get_player_profile(player_name)
-    if profile is None:
-        return jsonify({"error": "Player not found"}), 404
+        profile = get_player_profile(player_name)
+        if profile is None:
+            return jsonify({"error": "Player not found"}), 404
 
-    return jsonify(profile)
+        return jsonify(profile)
+    except Exception as e:
+        print("🔥 ERROR in /get_player_profile:", e)
+        return jsonify({"error": str(e)}), 500
 
 
 
