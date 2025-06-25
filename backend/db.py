@@ -15,7 +15,14 @@ Base = declarative_base()
 
 # --- Raw psycopg2 connection for manual SQL queries ---
 def get_connection():
-    return psycopg2.connect("dbname=postgres user=postgres.stnxjphrwhbwhxkggtvs password=Rv@96216 host=aws-0-ap-south-1.pooler.supabase.com port=6543 pool_mode:transaction")
+    return psycopg2.connect(
+    dbname="postgres",
+    user="postgres.stnxjphrwhbwhxkggtvs",
+    password="Rv@96216",
+    host="aws-0-ap-south-1.pooler.supabase.com",
+    port=6543
+)
+
 
 # --- Models ---
 class Player(Base):
