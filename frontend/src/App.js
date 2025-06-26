@@ -4,6 +4,9 @@ import DailyRankingScreen from "./DailyRankingScreen";
 import PreviousGamesScreen from "./PreviousGamesScreen";
 import OverallRankingScreen from "./OverallRankingScreen";
 import PlayerProfileScreen from "./PlayerProfileScreen";
+import HomeScreen from "./HomeScreen"; // or wherever you place it
+import OngoingGamesScreen from "./OngoingGamesScreen";
+
 
 // 🔸 Main App Component
 const App = () => {
@@ -155,49 +158,61 @@ const App = () => {
 
   const renderScreen = () => {
     switch (screen) {
+      // case "home":
+      //   return (
+      //     <div className="home-screen" style={{ padding: "2rem" }}>
+      //       <h2 style={{ fontSize: "2rem", marginBottom: "1.5rem", textAlign: "center" }}>
+      //         🏸 <span style={{ color: "#007BFF" }}>Badminton Match Manager</span>
+      //       </h2>
+
+      //       <div style={{ display: "grid", gap: "1rem" }}>
+      //         <button className="primary-button" onClick={() => setScreen("newGame")}>➕ Create New Game</button>
+      //         <button className="primary-button" onClick={() => setScreen("addPlayer")}>🧑 Add New Player</button>
+      //         <button className="primary-button" onClick={() => setScreen("games")}>📋 View Previous Games</button>
+      //         <button className="primary-button" onClick={() => setScreen("rankings")}>🏆 View Rankings</button>
+      //         <button className="primary-button" onClick={() => setScreen("profile")}>👤 View Player Profile</button>
+      //       </div>
+
+      //       {ongoingGames.length > 0 && (
+      //         <div style={{ marginTop: "2rem" }}>
+      //           <h3 style={{ color: "#28a745" }}>🟢 Ongoing Games</h3>
+      //           {ongoingGames.map((game) => (
+      //             <div key={game.id} style={{
+      //               marginBottom: "1rem",
+      //               padding: "1rem",
+      //               border: "1px solid #ccc",
+      //               borderRadius: "10px",
+      //               background: "#f8f9fa",
+      //               boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+      //             }}
+      //             onClick={() => {
+      //               setCurrentGame(game);
+      //               setScreen("game");
+      //             }}>
+      //               <strong>Game #{game.id}</strong>
+      //               <p>Players: {game.players.join(", ")}</p>
+      //               <p>Matches: {game.matches?.length ?? 0}</p>
+      //               <p style={{ fontSize: "0.9rem", color: "#888" }}>
+      //                 Created At: {new Date(game.created_at).toLocaleString()}
+      //               </p>
+      //             </div>
+      //           ))}
+      //         </div>
+      //       )}
+      //     </div>
+
+      //   );
       case "home":
+        return <HomeScreen setScreen={setScreen} ongoingGames={ongoingGames} />;
+
+      case "ongoing":
         return (
-          <div className="home-screen" style={{ padding: "2rem" }}>
-            <h2 style={{ fontSize: "2rem", marginBottom: "1.5rem", textAlign: "center" }}>
-              🏸 <span style={{ color: "#007BFF" }}>Badminton Match Manager</span>
-            </h2>
-
-            <div style={{ display: "grid", gap: "1rem" }}>
-              <button className="primary-button" onClick={() => setScreen("newGame")}>➕ Create New Game</button>
-              <button className="primary-button" onClick={() => setScreen("addPlayer")}>🧑 Add New Player</button>
-              <button className="primary-button" onClick={() => setScreen("games")}>📋 View Previous Games</button>
-              <button className="primary-button" onClick={() => setScreen("rankings")}>🏆 View Rankings</button>
-              <button className="primary-button" onClick={() => setScreen("profile")}>👤 View Player Profile</button>
-            </div>
-
-            {ongoingGames.length > 0 && (
-              <div style={{ marginTop: "2rem" }}>
-                <h3 style={{ color: "#28a745" }}>🟢 Ongoing Games</h3>
-                {ongoingGames.map((game) => (
-                  <div key={game.id} style={{
-                    marginBottom: "1rem",
-                    padding: "1rem",
-                    border: "1px solid #ccc",
-                    borderRadius: "10px",
-                    background: "#f8f9fa",
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
-                  }}
-                  onClick={() => {
-                    setCurrentGame(game);
-                    setScreen("game");
-                  }}>
-                    <strong>Game #{game.id}</strong>
-                    <p>Players: {game.players.join(", ")}</p>
-                    <p>Matches: {game.matches?.length ?? 0}</p>
-                    <p style={{ fontSize: "0.9rem", color: "#888" }}>
-                      Created At: {new Date(game.created_at).toLocaleString()}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
+          <OngoingGamesScreen
+            ongoingGames={ongoingGames}
+            onBack={() => setScreen("home")}
+            setCurrentGame={setCurrentGame}
+            setScreen={setScreen}
+          />
         );
 
 
@@ -352,6 +367,15 @@ const CreateGameScreen = ({ players, onBack, setCurrentGame, setOngoingGames }) 
   const [teams, setTeams] = useState([]);
   const [schedule, setSchedule] = useState([]);
   const [playerGameCounts, setPlayerGameCounts] = useState({});
+  const [gameType, setGameType] = useState("tournament"); // default
+
+
+  useEffect(() => {
+  setTeams([]);
+  setSchedule([]);
+  setPlayerGameCounts({});
+}, [gameType]);
+
 
   const togglePlayer = (name) => {
     setSelectedPlayers((prev) =>
@@ -369,33 +393,158 @@ const CreateGameScreen = ({ players, onBack, setCurrentGame, setOngoingGames }) 
     setTeams([team1, team2]);
   };
 
-  const generateSchedule = () => {
+ const generateSchedule = () => {
+  // ✅ Validate minimum players per game type
+  if (
+    (gameType === "singles" && selectedPlayers.length < 2) ||
+    (gameType === "doubles_random" && selectedPlayers.length < 4) ||
+    (gameType === "tournament" && selectedPlayers.length < 2)
+  ) {
+    alert(
+      gameType === "singles"
+        ? "Singles requires at least 2 players."
+        : gameType === "doubles_random"
+        ? "Random Doubles requires at least 4 players."
+        : "Tournament requires at least 2 players."
+    );
+    return;
+  }
+
+  const gameCountMap = {};
+  selectedPlayers.forEach(p => gameCountMap[p] = 0);
+  const schedule = [];
+
+  // ✅ TOURNAMENT
+  if (gameType === "tournament") {
     const [team1, team2] = teams;
-    if (team1.length < 2 || team2.length < 2) {
-      alert("Each team must have at least 2 players.");
+    if (!team1 || !team2 || team1.length < 1 || team2.length < 1) {
+      alert("Generate two teams with at least 1 player each.");
       return;
     }
 
-    const playerGameCount = {};
-    const newSchedule = [];
-    [...team1, ...team2].forEach((p) => (playerGameCount[p] = 0));
-
     for (let m = 0; m < matchCount; m++) {
-      const sortedTeam1 = [...team1].sort((a, b) => playerGameCount[a] - playerGameCount[b]);
-      const sortedTeam2 = [...team2].sort((a, b) => playerGameCount[a] - playerGameCount[b]);
+      const sortedTeam1 = [...team1].sort((a, b) => gameCountMap[a] - gameCountMap[b]);
+      const sortedTeam2 = [...team2].sort((a, b) => gameCountMap[a] - gameCountMap[b]);
 
       const pair1 = sortedTeam1.slice(0, 2).sort(() => Math.random() - 0.5);
       const pair2 = sortedTeam2.slice(0, 2).sort(() => Math.random() - 0.5);
 
-      if (pair1.length < 2 || pair2.length < 2) return;
+      if (pair1.length < 1 || pair2.length < 1) continue;
 
-      newSchedule.push({ team1: pair1, team2: pair2 });
-      [...pair1, ...pair2].forEach((p) => playerGameCount[p]++);
+      schedule.push({ team1: pair1, team2: pair2 });
+      [...pair1, ...pair2].forEach(p => gameCountMap[p]++);
+    }
+  }
+
+  // ✅ SINGLES
+  else if (gameType === "singles") {
+    const combinations = [];
+
+    for (let i = 0; i < selectedPlayers.length; i++) {
+      for (let j = i + 1; j < selectedPlayers.length; j++) {
+        combinations.push({ team1: [selectedPlayers[i]], team2: [selectedPlayers[j]] });
+      }
     }
 
-    setSchedule(newSchedule);
-    setPlayerGameCounts(playerGameCount);
-  };
+    const shuffled = combinations.sort(() => Math.random() - 0.5);
+    const maxGamesPerPlayer = Math.ceil((matchCount * 2) / selectedPlayers.length);
+    let index = 0;
+
+    while (schedule.length < matchCount) {
+      if (index >= shuffled.length) {
+        index = 0;
+        shuffled.sort(() => Math.random() - 0.5);
+      }
+
+      const match = shuffled[index++];
+      const [p1] = match.team1;
+      const [p2] = match.team2;
+
+      if (gameCountMap[p1] < maxGamesPerPlayer && gameCountMap[p2] < maxGamesPerPlayer) {
+        schedule.push(match);
+        gameCountMap[p1]++;
+        gameCountMap[p2]++;
+      }
+    }
+  }
+
+  // ✅ RANDOM DOUBLES
+  else if (gameType === "doubles_random") {
+    const allPlayers = [...selectedPlayers];
+
+    // helper to get all 4-player combinations
+    const getAllQuads = (players) => {
+      const quads = [];
+      for (let i = 0; i < players.length; i++) {
+        for (let j = i + 1; j < players.length; j++) {
+          for (let k = j + 1; k < players.length; k++) {
+            for (let l = k + 1; l < players.length; l++) {
+              quads.push([players[i], players[j], players[k], players[l]]);
+            }
+          }
+        }
+      }
+      return quads;
+    };
+
+    // build match pool with all possible 2v2 pairings from all quads
+    const buildMatchPool = () => {
+      const matches = [];
+      const quads = getAllQuads(allPlayers);
+
+      for (const quad of quads) {
+        const [a, b, c, d] = quad;
+        matches.push({ team1: [a, b], team2: [c, d] });
+        matches.push({ team1: [a, c], team2: [b, d] });
+        matches.push({ team1: [a, d], team2: [b, c] });
+      }
+
+      return matches;
+    };
+
+    const matchPool = buildMatchPool();
+    if (matchPool.length === 0) {
+      alert("Not enough players to create valid doubles matches.");
+      return;
+    }
+
+    const maxGamesPerPlayer = Math.ceil((matchCount * 4) / allPlayers.length);
+    let matchIndex = 0;
+    matchPool.sort(() => Math.random() - 0.5);
+
+    while (schedule.length < matchCount) {
+      if (matchIndex >= matchPool.length) {
+        matchIndex = 0;
+        matchPool.sort(() => Math.random() - 0.5);
+      }
+
+      const match = matchPool[matchIndex++];
+      const all = [...match.team1, ...match.team2];
+
+      if (all.every(p => gameCountMap[p] < maxGamesPerPlayer)) {
+        schedule.push(match);
+        all.forEach(p => gameCountMap[p]++);
+      }
+    }
+  }
+
+  // ❌ Unknown game type
+  else {
+    alert("Unknown game type selected.");
+    return;
+  }
+
+  // ✅ Done
+  if (schedule.length === 0) {
+    alert("Could not generate schedule. Try different players or match count.");
+    return;
+  }
+
+  setSchedule(schedule);
+  setPlayerGameCounts(gameCountMap);
+};
+
+
 
   const createGame = async () => {
     const res = await fetch("https://badminton-api-j9ja.onrender.com/create_game", {
@@ -444,6 +593,18 @@ const CreateGameScreen = ({ players, onBack, setCurrentGame, setOngoingGames }) 
           ))}
         </div>
       </div>
+      <div style={{ marginBottom: "1rem" }}>
+        <label><strong>Select Game Type:</strong></label>
+        <select
+          value={gameType}
+          onChange={(e) => setGameType(e.target.value)}
+          style={{ marginLeft: "10px", padding: "8px", borderRadius: "5px" }}
+        >
+          <option value="tournament">Tournament (Team 1 vs Team 2)</option>
+          <option value="singles">Singles (1v1)</option>
+          <option value="doubles_random">Doubles Random</option>
+        </select>
+      </div>
 
       <div style={{ margin: "1rem 0" }}>
         <label style={{ fontWeight: "bold" }}>Total Matches:</label>
@@ -456,10 +617,19 @@ const CreateGameScreen = ({ players, onBack, setCurrentGame, setOngoingGames }) 
         />
       </div>
 
-      <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginTop: "1rem" }}>
-        <button className="primary-button" onClick={generateTeams}>🎲 Generate Teams</button>
-        <button className="primary-button" onClick={generateSchedule}>📅 Generate Schedule</button>
-      </div>
+      {gameType === "tournament" && (
+        <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginTop: "1rem" }}>
+          <button className="primary-button" onClick={generateTeams}>🎲 Generate Teams</button>
+          <button className="primary-button" onClick={generateSchedule}>📅 Generate Schedule</button>
+        </div>
+      )}
+
+      {(gameType === "singles" || gameType === "doubles_random") && (
+        <div style={{ marginTop: "1rem" }}>
+          <button className="primary-button" onClick={generateSchedule}>📅 Generate Schedule</button>
+        </div>
+      )}
+
 
       {teams.length === 2 && (
         <div style={{ marginTop: "1.5rem" }}>

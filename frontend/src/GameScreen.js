@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 
 const GameScreen = ({ game, onEndGame }) => {
-  const { teams, matches, created_at } = game;
+  const { teams = [], matches = [], created_at } = game;
+
   const [scores, setScores] = useState(game.match_scores || []);
 
   const [wins, setWins] = useState({ team1: 0, team2: 0 });
@@ -60,14 +61,28 @@ const GameScreen = ({ game, onEndGame }) => {
       {/* Team Info Card */}
       <div style={cardStyle}>
         <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between" }}>
-          <div style={{ flex: "1 1 45%" }}>
-            <h3>Team A</h3>
-            <ul>{teams[0].map((p) => <li key={p}>{p}</li>)}</ul>
+          {teams.length === 2 ? (
+          <>
+            <div style={{ flex: "1 1 45%" }}>
+              <h3>Team A</h3>
+              <ul>{teams[0].map((p) => <li key={p}>{p}</li>)}</ul>
+            </div>
+            <div style={{ flex: "1 1 45%" }}>
+              <h3>Team B</h3>
+              <ul>{teams[1].map((p) => <li key={p}>{p}</li>)}</ul>
+            </div>
+          </>
+        ) : (
+          <div>
+            <h3>Players</h3>
+            <ul>
+              {game.players?.map((p) => (
+                <li key={p}>{p}</li>
+              ))}
+            </ul>
           </div>
-          <div style={{ flex: "1 1 45%" }}>
-            <h3>Team B</h3>
-            <ul>{teams[1].map((p) => <li key={p}>{p}</li>)}</ul>
-          </div>
+        )}
+
         </div>
         <div style={{ textAlign: "right", fontSize: "0.9rem", color: "#777", marginTop: "1rem" }}>
           {new Date(created_at).toLocaleString()}
