@@ -317,6 +317,120 @@ def get_overall_rankings():
 
 
     return sorted(rankings, key=lambda x: x["final_rating"], reverse=True)
+def get_rankings_by_type(match_type="overall"):
+    """
+    match_type: "overall" | "singles" | "doubles"
+    """
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT player, SUM(played), SUM(won), SUM(lost), SUM(point_diff)
+        FROM player_stats GROUP BY player
+    """)
+    raw_stats = cur.fetchall()
+
+    cur.execute("SELECT matches, results FROM completed_games")
+    games = cur.fetchall()
+    conn.close()
+
+    if not raw_stats:
+        return []
+
+    # Filter matches by type if needed
+    filtered_games = []
+    for matches, results in games:
+        if not matches or not results:
+            continue
+        new_matches = []
+        new_results = []
+        for m, r in zip(matches, results):
+            t1, t2 = m["team1"], m["team2"]
+            if match_type == "singles" and len(t1) == 1 and len(t2) == 1:
+                new_matches.append(m)
+                new_results.append(r)
+            elif match_type == "doubles" and len(t1) == 2 and len(t2) == 2:
+                new_matches.append(m)
+                new_results.append(r)
+            elif match_type == "overall":
+                new_matches.append(m)
+                new_results.append(r)
+        filtered_games.append((new_matches, new_results))
+
+    # Partner win% logic (only doubles really matter here)
+    partner_stats = {}
+    for matches, results in filtered_games:
+        for match, result in zip(matches, results):
+            t1, t2 = match["team1"], match["team2"]
+            s1, s2 = int(result["team1"]), int(result["team2"])
+            t1_won = s1 > s2
+
+            def add(p1, p2, won):
+                key = tuple(sorted([p1, p2]))
+                if key not in partner_stats:
+                    partner_stats[key] = [0, 0]
+                if won:
+                    partner_stats[key][0] += 1
+                partner_stats[key][1] += 1
+
+            if len(t1) == 2:
+                add(t1[0], t1[1], t1_won)
+            if len(t2) == 2:
+                add(t2[0], t2[1], not t1_won)
+
+    player_to_partners = {}
+    for (p1, p2), (wins, total) in partner_stats.items():
+        for a, b in [(p1, p2), (p2, p1)]:
+            player_to_partners.setdefault(a, []).append({
+                "partner": b, "wins": wins, "total": total,
+                "win_pct": round((wins / total) * 100, 2) if total else 0
+            })
+
+    # Normalize performance, win%, experience (same as overall)
+    max_played = max(row[1] for row in raw_stats)
+    diffs = [row[4] for row in raw_stats]
+    min_diff = min(diffs)
+    max_diff = max(diffs)
+    raw_win_rates = [(row[0], (row[2] / row[1]) * 100 if row[1] else 0) for row in raw_stats]
+    max_win_rate = max(w for _, w in raw_win_rates)
+    name_to_win_rate = dict(raw_win_rates)
+
+    rankings = []
+
+    for name, played, won, lost, diff in raw_stats:
+        exp_score = (played / max_played) * 100 if max_played else 0
+        perf_score = ((diff - min_diff) / (max_diff - min_diff)) * 100 if max_diff != min_diff else 50
+        raw_win = name_to_win_rate[name]
+        win_score = (raw_win / max_win_rate) * 100 if max_win_rate else 0
+        rating = round(0.35 * perf_score + 0.45 * win_score + 0.2 * exp_score, 2)
+
+        # Optional partner stats
+        best = worst = None
+        if name in player_to_partners:
+            partners = sorted(
+                [p for p in player_to_partners[name] if p["total"] >= 2],
+                key=lambda x: x["win_pct"],
+                reverse=True
+            )
+            if partners:
+                best = partners[0]
+                worst = partners[-1] if len(partners) > 1 else None
+
+        rankings.append({
+            "name": name,
+            "played": played,
+            "won": won,
+            "lost": lost,
+            "point_diff": round(diff, 2),
+            "win_rate": round(raw_win, 2),
+            "win_score": round(win_score, 2),
+            "experience_score": round(exp_score, 2),
+            "performance_score": round(perf_score, 2),
+            "final_rating": rating,
+            "best_partner": best,
+            "worst_partner": worst
+        })
+
+    return sorted(rankings, key=lambda x: x["final_rating"], reverse=True)
 
 def compute_rankings_by_type(match_type="overall"):
     """
