@@ -318,6 +318,73 @@ def get_overall_rankings():
 
     return sorted(rankings, key=lambda x: x["final_rating"], reverse=True)
 
+# def compute_rankings_by_type(match_type="overall"):
+#     """
+#     match_type can be 'overall', 'singles', or 'doubles'
+#     """
+#     conn = get_connection()
+#     cur = conn.cursor()
+#     cur.execute("SELECT matches, results FROM completed_games")
+#     games = cur.fetchall()
+#     conn.close()
+
+#     player_stats = {}
+
+#     def update_player(name, won, lost, point_diff):
+#         if name not in player_stats:
+#             player_stats[name] = {"played": 0, "won": 0, "lost": 0, "point_diff": 0}
+#         player_stats[name]["played"] += 1
+#         player_stats[name]["won"] += won
+#         player_stats[name]["lost"] += lost
+#         player_stats[name]["point_diff"] += point_diff
+
+#     for matches, results in games:
+#         if not matches or not results:
+#             continue
+
+#         for m, r in zip(matches, results):
+#             t1, t2 = m["team1"], m["team2"]
+#             s1, s2 = int(r["team1"]), int(r["team2"])
+
+#             # classify
+#             if match_type == "singles" and not (len(t1) == 1 and len(t2) == 1):
+#                 continue
+#             if match_type == "doubles" and not (len(t1) == 2 and len(t2) == 2):
+#                 continue
+
+#             t1_won, t2_won = (s1 > s2), (s2 > s1)
+
+#             for p in t1:
+#                 update_player(p, 1 if t1_won else 0, 1 if t2_won else 0, s1 - s2)
+#             for p in t2:
+#                 update_player(p, 1 if t2_won else 0, 1 if t1_won else 0, s2 - s1)
+
+#     # convert to list with rating
+#     rankings = []
+#     for name, stats in player_stats.items():
+#         played, won, lost, pd = (
+#             stats["played"],
+#             stats["won"],
+#             stats["lost"],
+#             stats["point_diff"],
+#         )
+#         wr = (won / played) * 100 if played else 0
+#         avg_pd = pd / played if played else 0
+#         rating = round(
+#             0.35 * ((avg_pd + 20) / 40) * 100 + 0.45 * wr + 0.2 * (played / 100) * 100, 2
+#         )
+#         rankings.append({
+#             "name": name,
+#             "played": played,
+#             "won": won,
+#             "lost": lost,
+#             "win_rate": round(wr, 2),
+#             "point_diff": round(avg_pd, 2),
+#             "final_rating": rating
+#         })
+
+#     return sorted(rankings, key=lambda x: x["final_rating"], reverse=True)
+
 def compute_rankings_by_type(match_type="overall"):
     """
     match_type can be 'overall', 'singles', or 'doubles'
@@ -329,6 +396,7 @@ def compute_rankings_by_type(match_type="overall"):
     conn.close()
 
     player_stats = {}
+    partner_stats = {}
 
     def update_player(name, won, lost, point_diff):
         if name not in player_stats:
@@ -338,52 +406,113 @@ def compute_rankings_by_type(match_type="overall"):
         player_stats[name]["lost"] += lost
         player_stats[name]["point_diff"] += point_diff
 
+    def update_partner(p1, p2, won):
+        key = tuple(sorted([p1, p2]))
+        if key not in partner_stats:
+            partner_stats[key] = [0, 0]
+        if won:
+            partner_stats[key][0] += 1
+        partner_stats[key][1] += 1
+
+    # Collect raw stats
     for matches, results in games:
         if not matches or not results:
             continue
-
         for m, r in zip(matches, results):
             t1, t2 = m["team1"], m["team2"]
             s1, s2 = int(r["team1"]), int(r["team2"])
+            t1_won = s1 > s2
 
-            # classify
+            # Filter by type
             if match_type == "singles" and not (len(t1) == 1 and len(t2) == 1):
                 continue
             if match_type == "doubles" and not (len(t1) == 2 and len(t2) == 2):
                 continue
 
-            t1_won, t2_won = (s1 > s2), (s2 > s1)
-
+            # Update player stats
             for p in t1:
-                update_player(p, 1 if t1_won else 0, 1 if t2_won else 0, s1 - s2)
+                update_player(p, 1 if t1_won else 0, 1 if not t1_won else 0, s1 - s2)
             for p in t2:
-                update_player(p, 1 if t2_won else 0, 1 if t1_won else 0, s2 - s1)
+                update_player(p, 1 if not t1_won else 0, 1 if t1_won else 0, s2 - s1)
 
-    # convert to list with rating
+            # Update partner stats only for doubles
+            if len(t1) == 2:
+                update_partner(t1[0], t1[1], t1_won)
+            if len(t2) == 2:
+                update_partner(t2[0], t2[1], not t1_won)
+
+    # Build partner mapping
+    player_to_partners = {}
+    for (p1, p2), (wins, total) in partner_stats.items():
+        for a, b in [(p1, p2), (p2, p1)]:
+            player_to_partners.setdefault(a, []).append({
+                "partner": b,
+                "wins": wins,
+                "total": total,
+                "win_pct": round((wins / total) * 100, 2) if total else 0
+            })
+
+    # Normalize metrics
+    stats_list = [(name, v["played"], v["won"], v["lost"], v["point_diff"]) 
+                  for name, v in player_stats.items()]
+    if not stats_list:
+        return []
+
+    max_played = max(row[1] for row in stats_list)
+    min_diff = min(row[4] for row in stats_list)
+    max_diff = max(row[4] for row in stats_list)
+    raw_win_rates = [(row[0], (row[2] / row[1]) * 100 if row[1] else 0) for row in stats_list]
+    max_win_rate = max(w for _, w in raw_win_rates)
+    name_to_win_rate = dict(raw_win_rates)
+
     rankings = []
-    for name, stats in player_stats.items():
-        played, won, lost, pd = (
-            stats["played"],
-            stats["won"],
-            stats["lost"],
-            stats["point_diff"],
-        )
-        wr = (won / played) * 100 if played else 0
-        avg_pd = pd / played if played else 0
-        rating = round(
-            0.35 * ((pd + 20) / 40) * 100 + 0.45 * wr + 0.2 * (played / 100) * 100, 2
-        )
+
+    for name, played, won, lost, diff in stats_list:
+        # Experience
+        exp_score = (played / max_played) * 100 if max_played else 0
+
+        # Performance
+        if max_diff != min_diff:
+            perf_score = ((diff - min_diff) / (max_diff - min_diff)) * 100
+        else:
+            perf_score = 50
+
+        # Win rate
+        raw_win = name_to_win_rate[name]
+        win_score = (raw_win / max_win_rate) * 100 if max_win_rate else 0
+
+        # Final rating with same weights as overall
+        rating = round(0.35 * perf_score + 0.45 * win_score + 0.2 * exp_score, 2)
+
+        # Best/Worst partner info for doubles and overall
+        best = worst = None
+        if match_type in ["doubles", "overall"] and name in player_to_partners:
+            partners = sorted(
+                [p for p in player_to_partners[name] if p["total"] >= 2],
+                key=lambda x: x["win_pct"],
+                reverse=True
+            )
+            if partners:
+                best = partners[0]
+                worst = partners[-1] if len(partners) > 1 else None
+
         rankings.append({
             "name": name,
             "played": played,
             "won": won,
             "lost": lost,
-            "win_rate": round(wr, 2),
-            "point_diff": round(pd, 2),
-            "final_rating": rating
+            "point_diff": round(diff, 2),
+            "win_rate": round(raw_win, 2),
+            "experience_score": round(exp_score, 2),
+            "performance_score": round(perf_score, 2),
+            "win_score": round(win_score, 2),
+            "final_rating": rating,
+            "best_partner": best,
+            "worst_partner": worst
         })
 
     return sorted(rankings, key=lambda x: x["final_rating"], reverse=True)
+
 
 def get_player_profile(player_name):
     import json
