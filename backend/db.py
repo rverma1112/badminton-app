@@ -371,7 +371,7 @@ def compute_rankings_by_type(match_type="overall"):
         wr = (won / played) * 100 if played else 0
         avg_pd = pd / played if played else 0
         rating = round(
-            0.4 * ((avg_pd + 20) / 40) * 100 + 0.3 * wr + 0.2 * (played / 100) * 100, 2
+            0.35 * ((avg_pd + 20) / 40) * 100 + 0.45 * wr + 0.2 * (played / 100) * 100, 2
         )
         rankings.append({
             "name": name,
