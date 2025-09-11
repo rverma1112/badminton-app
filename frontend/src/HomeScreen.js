@@ -24,7 +24,11 @@ const HomeScreen = ({ setScreen, ongoingGames = [] }) => {
         {buttons.map((btn, i) => (
           <div
             key={i}
-            style={{ ...styles.card, backgroundImage: `url('/bg${i % 4 + 1}.png')` }}
+            style={{ ...styles.card, backgroundImage: `
+            linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)),
+            url('/wave-overlay.svg'),
+            url('/bg${i % 4 + 1}.png')
+        `, }}
             onClick={() => setScreen(btn.screen)}
           >
             <span style={styles.cardText}>{btn.label}</span>

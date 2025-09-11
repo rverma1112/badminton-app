@@ -320,91 +320,186 @@ def get_overall_rankings():
 
 
 def get_player_profile(player_name):
+    import json
     conn = get_connection()
     cur = conn.cursor()
-    cur.execute("""
-        SELECT played, won, lost, point_diff, game_id, created_at
-        FROM player_stats WHERE player = %s ORDER BY created_at
-    """, (player_name,))
-    rows = cur.fetchall()
 
-    if not rows:
+    # 1) Get aggregate totals quickly
+    cur.execute("""
+        SELECT SUM(played) as total_played,
+               SUM(won) as total_won,
+               SUM(lost) as total_lost,
+               SUM(point_diff) as total_point_diff
+        FROM player_stats WHERE player = %s
+    """, (player_name,))
+    totals = cur.fetchone()
+    if not totals or totals[0] is None:
         conn.close()
         return None
 
+    total_played, total_won, total_lost, total_point_diff = totals
+
+    # 2) Fetch recent history for charting/ progression (limit to last 50 rows)
+    cur.execute("""
+        SELECT played, won, lost, point_diff, game_id, created_at
+        FROM player_stats
+        WHERE player = %s
+        ORDER BY created_at DESC
+        LIMIT 50
+    """, (player_name,))
+    rows = cur.fetchall()
+    # We'll process rows from oldest -> newest for cumulative rating progression
+    rows = list(reversed(rows))
+
     history = []
-    tp, tw, tl, pd = 0, 0, 0, 0
+    cum_played = 0
+    cum_won = 0
+    cum_lost = 0
+    cum_pd = 0.0
+
     for played, won, lost, point_diff, game_id, created_at in rows:
+        # normalize created_at to datetime
         if isinstance(created_at, str):
-            created_at = datetime.fromisoformat(created_at)
-        tp += played
-        tw += won
-        tl += lost
-        pd += point_diff
+            try:
+                created_at = datetime.fromisoformat(created_at)
+            except Exception:
+                # fallback: leave as string if parsing fails
+                pass
+
+        # increment cumulative counters
+        played = int(played or 0)
+        won = int(won or 0)
+        lost = int(lost or 0)
+        pd = float(point_diff or 0.0)
+
+        cum_played += played
+        cum_won += won
+        cum_lost += lost
+        cum_pd += pd
+
         wr = (won / played) * 100 if played else 0
-        avg = point_diff / played if played else 0
-        rating = round(0.4 * ((avg + 20) / 40) * 100 + 0.3 * wr + 0.2 * (tp / 100) * 100, 2)
+        avg_pd = (pd / played) if played else 0
+
+        # rating formula (kept compatible with your previous formula)
+        rating = round(
+            0.4 * ((avg_pd + 20) / 40) * 100
+            + 0.3 * wr
+            + 0.2 * (cum_played / 100) * 100,
+            2
+        )
+
         history.append({
-            "date": created_at.isoformat(),
+            "date": created_at.isoformat() if hasattr(created_at, "isoformat") else str(created_at),
             "rating": rating,
             "win_rate": round(wr, 2),
-            "point_diff": round(avg, 2)
+            "point_diff": round(avg_pd, 2)
         })
 
+    # 3) Load completed games to compute partner/opponent stats
     cur.execute("SELECT matches, results FROM completed_games")
-    games = cur.fetchall()
-    conn.close()
+    game_rows = cur.fetchall()
 
-    partner_stats, opponent_stats = {}, {}
+    # Use nested dicts: partner_stats[player][partner] = [wins, total]
+    partner_stats = {}
+    opponent_stats = {}
 
-    def update(p1, p2, won, target):
-        key = tuple(sorted([p1, p2]))
-        if key not in target:
-            target[key] = [0, 0]
+    def safe_load(val):
+        if val is None:
+            return []
+        if isinstance(val, str):
+            try:
+                return json.loads(val)
+            except Exception:
+                return []
+        return val
+
+    def update_nested(container, main, other, won):
+        # container: dict -> container[main] = { other: [wins, total], ...}
+        if main not in container:
+            container[main] = {}
+        w, t = container[main].get(other, (0, 0))
         if won:
-            target[key][0] += 1
-        target[key][1] += 1
+            w += 1
+        t += 1
+        container[main][other] = (w, t)
 
-    for matches, results in games:  # ✅ already lists, no json.loads needed
+    for matches, results in game_rows:
+        matches = safe_load(matches)
+        results = safe_load(results)
         if not matches or not results:
             continue
         for m, r in zip(matches, results):
-            t1, t2 = m["team1"], m["team2"]
-            s1, s2 = int(r["team1"]), int(r["team2"])
+            try:
+                t1 = m.get("team1", [])
+                t2 = m.get("team2", [])
+                s1 = int(r.get("team1", 0))
+                s2 = int(r.get("team2", 0))
+            except Exception:
+                # malformed entry; skip
+                continue
+
             t1_won = s1 > s2
+
+            # if player participated in this match
+            participated = False
             if player_name in t1:
                 team = t1
                 opp = t2
                 won = t1_won
+                participated = True
             elif player_name in t2:
                 team = t2
                 opp = t1
                 won = not t1_won
+                participated = True
             else:
-                continue
-            teammate = [p for p in team if p != player_name][0]
-            update(player_name, teammate, won, partner_stats)
-            for o in opp:
-                update(player_name, o, won, opponent_stats)
+                participated = False
 
-    def best_worst(stats):
-        filtered = [(p2, w / t * 100, t) for (p1, p2), (w, t) in stats.items() if p1 == player_name and t >= 2]
-        if not filtered:
+            if not participated:
+                continue
+
+            # partner: the teammate if exists (for singles there may be none)
+            teammates = [p for p in team if p != player_name]
+            if teammates:
+                teammate = teammates[0]
+                update_nested(partner_stats, player_name, teammate, won)
+
+            # opponents: update for each opponent player in opposing team
+            for o in opp:
+                update_nested(opponent_stats, player_name, o, won)
+
+    # Helper to compute best/worst from nested dict
+    def best_worst_from_nested(nested):
+        if player_name not in nested:
             return None, None
-        best = max(filtered, key=lambda x: x[1])
-        worst = min(filtered, key=lambda x: x[1])
+        items = []
+        for other, (wins, total) in nested[player_name].items():
+            if total >= 2:  # require at least 2 matches together
+                win_pct = (wins / total) * 100 if total else 0
+                items.append((other, win_pct, total))
+        if not items:
+            return None, None
+        best = max(items, key=lambda x: x[1])
+        worst = min(items, key=lambda x: x[1])
         return {"name": best[0], "win_pct": round(best[1], 2)}, {"name": worst[0], "win_pct": round(worst[1], 2)}
 
-    best_p, worst_p = best_worst(partner_stats)
-    best_o, worst_o = best_worst(opponent_stats)
+    best_p, worst_p = best_worst_from_nested(partner_stats)
+    best_o, worst_o = best_worst_from_nested(opponent_stats)
+
+    conn.close()
+
+    # Safety on totals (avoid division by zero)
+    played_total = int(total_played or 0)
+    win_pct_overall = round((int(total_won or 0) / played_total) * 100, 2) if played_total else 0
+    avg_point_diff = round((float(total_point_diff or 0.0) / played_total), 2) if played_total else 0
 
     return {
         "name": player_name,
-        "played": tp,
-        "won": tw,
-        "lost": tl,
-        "win_rate": round((tw / tp) * 100, 2),
-        "avg_point_diff": round(pd / tp, 2),
+        "played": played_total,
+        "won": int(total_won or 0),
+        "lost": int(total_lost or 0),
+        "win_rate": win_pct_overall,
+        "avg_point_diff": avg_point_diff,
         "rating_progression": history,
         "best_partner": best_p,
         "worst_partner": worst_p,

@@ -224,9 +224,10 @@ const App = () => {
             players={players}
             onBack={() => setScreen("home")}
             setCurrentGame={setCurrentGame}
-            setOngoingGames={setOngoingGames} // ✅ add this line
+            setOngoingGames={setOngoingGames}
           />
         );
+
         
       case "game":
         return <GameScreen game={currentGame} onEndGame={endGame} />;

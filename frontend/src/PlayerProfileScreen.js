@@ -19,17 +19,29 @@ const PlayerProfileScreen = ({ onBack }) => {
     fetch("https://badminton-api-j9ja.onrender.com/get_players")
       .then((res) => res.json())
       .then((data) => {
-        setPlayers(data);
-        setSelectedPlayer(data[0]);
+        setPlayers(data || []);
+        setSelectedPlayer((data && data.length) ? data[0] : "");
+      })
+      .catch(() => {
+        setPlayers([]);
+        setSelectedPlayer("");
       });
   }, []);
 
+
+
   useEffect(() => {
-    if (selectedPlayer) {
-      fetch(`https://badminton-api-j9ja.onrender.com/get_player_profile?name=${selectedPlayer}`)
-        .then((res) => res.json())
-        .then((data) => setProfile(data));
+    if (!selectedPlayer) {
+      setProfile(null);
+      return;
     }
+    fetch(`https://badminton-api-j9ja.onrender.com/get_player_profile?name=${encodeURIComponent(selectedPlayer)}`)
+      .then((res) => res.json())
+      .then((data) => setProfile(data))
+      .catch((err) => {
+        console.error("Failed to load profile:", err);
+        setProfile(null);
+      });
   }, [selectedPlayer]);
 
   return (
