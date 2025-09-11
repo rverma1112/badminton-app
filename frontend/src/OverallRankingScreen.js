@@ -32,59 +32,49 @@ const OverallRankingScreen = ({ onBack }) => {
   );
 
   return (
-    <div style={{ padding: "2rem", maxWidth: "1000px", margin: "0 auto", fontFamily: "Segoe UI, sans-serif" }}>
+    <div style={{ padding: "1rem", maxWidth: "900px", margin: "0 auto", fontFamily: "Segoe UI, sans-serif" }}>
       <h2 style={{ textAlign: "center", marginBottom: "1rem" }}>🌐 Overall Player Rankings</h2>
 
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.95rem" }}>
-          <thead>
-            <tr style={{ background: "#f0f0f0", textAlign: "left", cursor: "pointer" }}>
-              <th style={thStyle}>#</th>
-              <th style={thStyle}>Player</th>
-              {getHeader("Played", "played")}
-              {getHeader("Won", "won")}
-              {getHeader("Lost", "lost")}
-              {getHeader("Win%", "win_rate")}
-              {getHeader("Pt Diff", "point_diff")}
-              {getHeader("Rating", "final_rating")}
-              <th style={thStyle}>Best Partner</th>
-              <th style={thStyle}>Worst Partner</th>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
+        <thead>
+          <tr style={{ background: "#f0f0f0", textAlign: "left", cursor: "pointer" }}>
+            <th style={thStyle}>#</th>
+            <th style={thStyle}>Player</th>
+            {getHeader("P", "played")}
+            {getHeader("W", "won")}
+            {getHeader("L", "lost")}
+            {getHeader("Win%", "win_rate")}
+            {getHeader("Rating", "final_rating")}
+          </tr>
+        </thead>
+        <tbody>
+          {sortedRankings.map((r, i) => (
+            <tr
+              key={r.name}
+              style={{
+                background: i % 2 === 0 ? "#fff" : "#f9f9f9",
+                borderBottom: "1px solid #eee",
+              }}
+            >
+              <td style={tdStyle}>{i + 1}</td>
+              <td style={tdStyle}>
+                <strong>{r.name}</strong>
+                <div style={{ fontSize: "0.75rem", color: "#555" }}>
+                  {r.best_partner ? `Best: ${r.best_partner.partner} (${r.best_partner.win_pct}%)` : "Best: -"}<br />
+                  {r.worst_partner ? `Worst: ${r.worst_partner.partner} (${r.worst_partner.win_pct}%)` : "Worst: -"}
+                </div>
+              </td>
+              <td style={tdStyle}>{r.played}</td>
+              <td style={tdStyle}>{r.won}</td>
+              <td style={tdStyle}>{r.lost}</td>
+              <td style={tdStyle}>{r.win_rate}%</td>
+              <td style={{ ...tdStyle, fontWeight: "bold", color: "#007bff" }}>{r.final_rating}</td>
             </tr>
-          </thead>
-          <tbody>
-            {sortedRankings.map((r, i) => (
-              <tr
-                key={r.name}
-                style={{
-                  background: i % 2 === 0 ? "#fff" : "#f9f9f9",
-                  borderBottom: "1px solid #eee",
-                }}
-              >
-                <td style={tdStyle}>{i + 1}</td>
-                <td style={tdStyle}><strong>{r.name}</strong></td>
-                <td style={tdStyle}>{r.played}</td>
-                <td style={tdStyle}>{r.won}</td>
-                <td style={tdStyle}>{r.lost}</td>
-                <td style={tdStyle}>{r.win_rate}%</td>
-                <td style={tdStyle}>{r.point_diff}</td>
-                <td style={{ ...tdStyle, fontWeight: "bold", color: "#007bff" }}>{r.final_rating}</td>
-                <td style={tdStyle}>
-                  {r.best_partner
-                    ? `${r.best_partner.partner} (${r.best_partner.win_pct}%)`
-                    : "-"}
-                </td>
-                <td style={tdStyle}>
-                  {r.worst_partner
-                    ? `${r.worst_partner.partner} (${r.worst_partner.win_pct}%)`
-                    : "-"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </tbody>
+      </table>
 
-      <div style={{ textAlign: "center", marginTop: "2rem" }}>
+      <div style={{ textAlign: "center", marginTop: "1.5rem" }}>
         <button
           onClick={onBack}
           style={{
@@ -104,17 +94,16 @@ const OverallRankingScreen = ({ onBack }) => {
   );
 };
 
-// Table header style
 const thStyle = {
-  padding: "12px 10px",
+  padding: "10px 6px",
   borderBottom: "2px solid #ddd",
   userSelect: "none",
 };
 
-// Table cell style
 const tdStyle = {
-  padding: "10px 8px",
+  padding: "8px 6px",
   whiteSpace: "nowrap",
+  verticalAlign: "top",
 };
 
 export default OverallRankingScreen;
