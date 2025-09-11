@@ -28,8 +28,6 @@ const PlayerProfileScreen = ({ onBack }) => {
       });
   }, []);
 
-
-
   useEffect(() => {
     if (!selectedPlayer) {
       setProfile(null);
@@ -45,7 +43,7 @@ const PlayerProfileScreen = ({ onBack }) => {
   }, [selectedPlayer]);
 
   return (
-    <div style={{ padding: "2rem", maxWidth: 800, margin: "0 auto" }}>
+    <div style={{ padding: "2rem", maxWidth: 900, margin: "0 auto" }}>
       <h2>👤 Player Profile</h2>
 
       <div style={{ marginBottom: "1rem" }}>
@@ -104,6 +102,68 @@ const PlayerProfileScreen = ({ onBack }) => {
                 ? `${profile.least_favourite_opponent.name} (${profile.least_favourite_opponent.win_pct}%)`
                 : "N/A"}
             </p>
+          </div>
+
+          {/* Matches With Each */}
+          <div style={{ marginTop: "1rem" }}>
+            <h3>👥 Matches With Each Player</h3>
+            {profile.matches_with_each.length === 0 ? (
+              <p>No data available</p>
+            ) : (
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    <th style={{ border: "1px solid #ccc", padding: "4px" }}>Player</th>
+                    <th style={{ border: "1px solid #ccc", padding: "4px" }}>Matches</th>
+                    <th style={{ border: "1px solid #ccc", padding: "4px" }}>Wins</th>
+                    <th style={{ border: "1px solid #ccc", padding: "4px" }}>Losses</th>
+                    <th style={{ border: "1px solid #ccc", padding: "4px" }}>Win %</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {profile.matches_with_each.map((p) => (
+                    <tr key={p.player}>
+                      <td style={{ border: "1px solid #ccc", padding: "4px" }}>{p.player}</td>
+                      <td style={{ border: "1px solid #ccc", padding: "4px" }}>{p.matches_played}</td>
+                      <td style={{ border: "1px solid #ccc", padding: "4px" }}>{p.wins}</td>
+                      <td style={{ border: "1px solid #ccc", padding: "4px" }}>{p.losses}</td>
+                      <td style={{ border: "1px solid #ccc", padding: "4px" }}>{p.win_pct}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Matches Against Each */}
+          <div style={{ marginTop: "1rem" }}>
+            <h3>🛡️ Matches Against Each Player</h3>
+            {profile.matches_against_each.length === 0 ? (
+              <p>No data available</p>
+            ) : (
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    <th style={{ border: "1px solid #ccc", padding: "4px" }}>Player</th>
+                    <th style={{ border: "1px solid #ccc", padding: "4px" }}>Matches</th>
+                    <th style={{ border: "1px solid #ccc", padding: "4px" }}>Wins</th>
+                    <th style={{ border: "1px solid #ccc", padding: "4px" }}>Losses</th>
+                    <th style={{ border: "1px solid #ccc", padding: "4px" }}>Win %</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {profile.matches_against_each.map((p) => (
+                    <tr key={p.player}>
+                      <td style={{ border: "1px solid #ccc", padding: "4px" }}>{p.player}</td>
+                      <td style={{ border: "1px solid #ccc", padding: "4px" }}>{p.matches_played}</td>
+                      <td style={{ border: "1px solid #ccc", padding: "4px" }}>{p.wins}</td>
+                      <td style={{ border: "1px solid #ccc", padding: "4px" }}>{p.losses}</td>
+                      <td style={{ border: "1px solid #ccc", padding: "4px" }}>{p.win_pct}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
 
           <div style={{ marginTop: "2rem" }}>

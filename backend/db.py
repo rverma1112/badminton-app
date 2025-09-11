@@ -516,6 +516,7 @@ def compute_rankings_by_type(match_type="overall"):
 
 def get_player_profile(player_name):
     import json
+    from datetime import datetime
     conn = get_connection()
     cur = conn.cursor()
 
@@ -543,8 +544,7 @@ def get_player_profile(player_name):
         LIMIT 50
     """, (player_name,))
     rows = cur.fetchall()
-    # We'll process rows from oldest -> newest for cumulative rating progression
-    rows = list(reversed(rows))
+    rows = list(reversed(rows))  # oldest -> newest
 
     history = []
     cum_played = 0
@@ -553,15 +553,12 @@ def get_player_profile(player_name):
     cum_pd = 0.0
 
     for played, won, lost, point_diff, game_id, created_at in rows:
-        # normalize created_at to datetime
         if isinstance(created_at, str):
             try:
                 created_at = datetime.fromisoformat(created_at)
             except Exception:
-                # fallback: leave as string if parsing fails
                 pass
 
-        # increment cumulative counters
         played = int(played or 0)
         won = int(won or 0)
         lost = int(lost or 0)
@@ -575,7 +572,6 @@ def get_player_profile(player_name):
         wr = (won / played) * 100 if played else 0
         avg_pd = (pd / played) if played else 0
 
-        # rating formula (kept compatible with your previous formula)
         rating = round(
             0.4 * ((avg_pd + 20) / 40) * 100
             + 0.3 * wr
@@ -594,7 +590,6 @@ def get_player_profile(player_name):
     cur.execute("SELECT matches, results FROM completed_games")
     game_rows = cur.fetchall()
 
-    # Use nested dicts: partner_stats[player][partner] = [wins, total]
     partner_stats = {}
     opponent_stats = {}
 
@@ -609,7 +604,6 @@ def get_player_profile(player_name):
         return val
 
     def update_nested(container, main, other, won):
-        # container: dict -> container[main] = { other: [wins, total], ...}
         if main not in container:
             container[main] = {}
         w, t = container[main].get(other, (0, 0))
@@ -630,12 +624,9 @@ def get_player_profile(player_name):
                 s1 = int(r.get("team1", 0))
                 s2 = int(r.get("team2", 0))
             except Exception:
-                # malformed entry; skip
                 continue
 
             t1_won = s1 > s2
-
-            # if player participated in this match
             participated = False
             if player_name in t1:
                 team = t1
@@ -647,19 +638,17 @@ def get_player_profile(player_name):
                 opp = t1
                 won = not t1_won
                 participated = True
-            else:
-                participated = False
 
             if not participated:
                 continue
 
-            # partner: the teammate if exists (for singles there may be none)
+            # partner: teammate if exists
             teammates = [p for p in team if p != player_name]
             if teammates:
                 teammate = teammates[0]
                 update_nested(partner_stats, player_name, teammate, won)
 
-            # opponents: update for each opponent player in opposing team
+            # opponents
             for o in opp:
                 update_nested(opponent_stats, player_name, o, won)
 
@@ -681,9 +670,31 @@ def get_player_profile(player_name):
     best_p, worst_p = best_worst_from_nested(partner_stats)
     best_o, worst_o = best_worst_from_nested(opponent_stats)
 
+    # Convert nested dicts to full lists with counts
+    matches_with_each = [
+        {
+            "player": teammate,
+            "matches_played": total,
+            "wins": wins,
+            "losses": total - wins,
+            "win_pct": round((wins / total) * 100, 2) if total else 0
+        }
+        for teammate, (wins, total) in partner_stats.get(player_name, {}).items()
+    ]
+
+    matches_against_each = [
+        {
+            "player": opponent,
+            "matches_played": total,
+            "wins": wins,
+            "losses": total - wins,
+            "win_pct": round((wins / total) * 100, 2) if total else 0
+        }
+        for opponent, (wins, total) in opponent_stats.get(player_name, {}).items()
+    ]
+
     conn.close()
 
-    # Safety on totals (avoid division by zero)
     played_total = int(total_played or 0)
     win_pct_overall = round((int(total_won or 0) / played_total) * 100, 2) if played_total else 0
     avg_point_diff = round((float(total_point_diff or 0.0) / played_total), 2) if played_total else 0
@@ -699,5 +710,7 @@ def get_player_profile(player_name):
         "best_partner": best_p,
         "worst_partner": worst_p,
         "favourite_opponent": best_o,
-        "least_favourite_opponent": worst_o
+        "least_favourite_opponent": worst_o,
+        "matches_with_each": matches_with_each,
+        "matches_against_each": matches_against_each
     }
