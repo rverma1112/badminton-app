@@ -1,80 +1,100 @@
 import React, { useEffect, useState } from "react";
 
 const OverallRankingScreen = ({ onBack }) => {
-  const [rankings, setRankings] = useState([]);
-  const [sortConfig, setSortConfig] = useState({ key: "final_rating", direction: "desc" });
+  const [overall, setOverall] = useState([]);
+  const [singles, setSingles] = useState([]);
+  const [doubles, setDoubles] = useState([]);
 
   useEffect(() => {
     fetch("https://badminton-api-j9ja.onrender.com/get_rankings")
       .then((res) => res.json())
-      .then((data) => setRankings(data.rankings || []));
+      .then((data) => setOverall(data.rankings || []));
+
+    fetch("https://badminton-api-j9ja.onrender.com/get_singles_rankings")
+      .then((res) => res.json())
+      .then((data) => setSingles(data.rankings || []));
+
+    fetch("https://badminton-api-j9ja.onrender.com/get_doubles_rankings")
+      .then((res) => res.json())
+      .then((data) => setDoubles(data.rankings || []));
   }, []);
 
-  const sortedRankings = [...rankings].sort((a, b) => {
-    const { key, direction } = sortConfig;
-    if (a[key] < b[key]) return direction === "asc" ? -1 : 1;
-    if (a[key] > b[key]) return direction === "asc" ? 1 : -1;
-    return 0;
-  });
-
-  const requestSort = (key) => {
-    let direction = "asc";
-    if (sortConfig.key === key && sortConfig.direction === "asc") {
-      direction = "desc";
-    }
-    setSortConfig({ key, direction });
-  };
-
-  const getHeader = (label, key) => (
-    <th style={thStyle} onClick={() => requestSort(key)}>
-      {label} {sortConfig.key === key ? (sortConfig.direction === "asc" ? "↑" : "↓") : ""}
-    </th>
+  const renderTable = (title, rankings) => (
+    <div style={{ marginBottom: "2rem" }}>
+      <h3 style={{ textAlign: "center", marginBottom: "0.5rem" }}>{title}</h3>
+      <div style={{ overflowX: "auto" }}>
+        <table
+          style={{
+            width: "100%",
+            borderCollapse: "collapse",
+            fontSize: "0.95rem",
+          }}
+        >
+          <thead>
+            <tr style={{ background: "#f0f0f0", textAlign: "left" }}>
+              <th style={thStyle}>#</th>
+              <th style={thStyle}>Player</th>
+              <th style={thStyle}>Played</th>
+              <th style={thStyle}>Won</th>
+              <th style={thStyle}>Lost</th>
+              <th style={thStyle}>Win%</th>
+              <th style={thStyle}>Pt Diff</th>
+              <th style={thStyle}>Rating</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rankings.map((r, i) => (
+              <tr
+                key={r.name + title}
+                style={{
+                  background: i % 2 === 0 ? "#fff" : "#f9f9f9",
+                  borderBottom: "1px solid #eee",
+                }}
+              >
+                <td style={tdStyle}>{i + 1}</td>
+                <td style={tdStyle}>
+                  <strong>{r.name}</strong>
+                </td>
+                <td style={tdStyle}>{r.played}</td>
+                <td style={tdStyle}>{r.won}</td>
+                <td style={tdStyle}>{r.lost}</td>
+                <td style={tdStyle}>{r.win_rate}%</td>
+                <td style={tdStyle}>{r.point_diff}</td>
+                <td
+                  style={{
+                    ...tdStyle,
+                    fontWeight: "bold",
+                    color: "#007bff",
+                  }}
+                >
+                  {r.final_rating}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 
   return (
-    <div style={{ padding: "1rem", maxWidth: "900px", margin: "0 auto", fontFamily: "Segoe UI, sans-serif" }}>
-      <h2 style={{ textAlign: "center", marginBottom: "1rem" }}>🌐 Overall Player Rankings</h2>
+    <div
+      style={{
+        padding: "2rem",
+        maxWidth: "1000px",
+        margin: "0 auto",
+        fontFamily: "Segoe UI, sans-serif",
+      }}
+    >
+      <h2 style={{ textAlign: "center", marginBottom: "1rem" }}>
+        🌐 Player Rankings
+      </h2>
 
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
-        <thead>
-          <tr style={{ background: "#f0f0f0", textAlign: "left", cursor: "pointer" }}>
-            <th style={thStyle}>#</th>
-            <th style={thStyle}>Player</th>
-            {getHeader("P", "played")}
-            {getHeader("W", "won")}
-            {getHeader("L", "lost")}
-            {getHeader("Win%", "win_rate")}
-            {getHeader("Rating", "final_rating")}
-          </tr>
-        </thead>
-        <tbody>
-          {sortedRankings.map((r, i) => (
-            <tr
-              key={r.name}
-              style={{
-                background: i % 2 === 0 ? "#fff" : "#f9f9f9",
-                borderBottom: "1px solid #eee",
-              }}
-            >
-              <td style={tdStyle}>{i + 1}</td>
-              <td style={tdStyle}>
-                <strong>{r.name}</strong>
-                <div style={{ fontSize: "0.75rem", color: "#555" }}>
-                  {r.best_partner ? `Best: ${r.best_partner.partner} (${r.best_partner.win_pct}%)` : "Best: -"}<br />
-                  {r.worst_partner ? `Worst: ${r.worst_partner.partner} (${r.worst_partner.win_pct}%)` : "Worst: -"}
-                </div>
-              </td>
-              <td style={tdStyle}>{r.played}</td>
-              <td style={tdStyle}>{r.won}</td>
-              <td style={tdStyle}>{r.lost}</td>
-              <td style={tdStyle}>{r.win_rate}%</td>
-              <td style={{ ...tdStyle, fontWeight: "bold", color: "#007bff" }}>{r.final_rating}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {renderTable("🏆 Overall Rankings", overall)}
+      {renderTable("🎯 Singles Rankings", singles)}
+      {renderTable("🤝 Doubles Rankings", doubles)}
 
-      <div style={{ textAlign: "center", marginTop: "1.5rem" }}>
+      <div style={{ textAlign: "center", marginTop: "2rem" }}>
         <button
           onClick={onBack}
           style={{
@@ -94,16 +114,16 @@ const OverallRankingScreen = ({ onBack }) => {
   );
 };
 
+// Table header style
 const thStyle = {
-  padding: "10px 6px",
+  padding: "12px 10px",
   borderBottom: "2px solid #ddd",
-  userSelect: "none",
 };
 
+// Table cell style
 const tdStyle = {
-  padding: "8px 6px",
+  padding: "10px 8px",
   whiteSpace: "nowrap",
-  verticalAlign: "top",
 };
 
 export default OverallRankingScreen;

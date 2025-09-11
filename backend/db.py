@@ -318,6 +318,72 @@ def get_overall_rankings():
 
     return sorted(rankings, key=lambda x: x["final_rating"], reverse=True)
 
+def compute_rankings_by_type(match_type="overall"):
+    """
+    match_type can be 'overall', 'singles', or 'doubles'
+    """
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT matches, results FROM completed_games")
+    games = cur.fetchall()
+    conn.close()
+
+    player_stats = {}
+
+    def update_player(name, won, lost, point_diff):
+        if name not in player_stats:
+            player_stats[name] = {"played": 0, "won": 0, "lost": 0, "point_diff": 0}
+        player_stats[name]["played"] += 1
+        player_stats[name]["won"] += won
+        player_stats[name]["lost"] += lost
+        player_stats[name]["point_diff"] += point_diff
+
+    for matches, results in games:
+        if not matches or not results:
+            continue
+
+        for m, r in zip(matches, results):
+            t1, t2 = m["team1"], m["team2"]
+            s1, s2 = int(r["team1"]), int(r["team2"])
+
+            # classify
+            if match_type == "singles" and not (len(t1) == 1 and len(t2) == 1):
+                continue
+            if match_type == "doubles" and not (len(t1) == 2 and len(t2) == 2):
+                continue
+
+            t1_won, t2_won = (s1 > s2), (s2 > s1)
+
+            for p in t1:
+                update_player(p, 1 if t1_won else 0, 1 if t2_won else 0, s1 - s2)
+            for p in t2:
+                update_player(p, 1 if t2_won else 0, 1 if t1_won else 0, s2 - s1)
+
+    # convert to list with rating
+    rankings = []
+    for name, stats in player_stats.items():
+        played, won, lost, pd = (
+            stats["played"],
+            stats["won"],
+            stats["lost"],
+            stats["point_diff"],
+        )
+        wr = (won / played) * 100 if played else 0
+        avg_pd = pd / played if played else 0
+        rating = round(
+            0.4 * ((avg_pd + 20) / 40) * 100 + 0.3 * wr + 0.2 * (played / 100) * 100, 2
+        )
+        rankings.append({
+            "name": name,
+            "played": played,
+            "won": won,
+            "lost": lost,
+            "win_rate": round(wr, 2),
+            "point_diff": round(avg_pd, 2),
+            "final_rating": rating
+        })
+
+    return sorted(rankings, key=lambda x: x["final_rating"], reverse=True)
 
 def get_player_profile(player_name):
     import json

@@ -5,7 +5,7 @@ from db import (
     save_game_to_db, get_all_ongoing_games_from_db, save_player_stats,
     update_match_score, mark_game_as_completed,
     get_all_completed_games, get_overall_rankings, get_player_profile,
-    delete_game
+    delete_game, compute_rankings_by_type
 )
 
 import itertools
@@ -117,6 +117,22 @@ def save_stats():
 
     return jsonify({"status": "ok"})
 
+@app.route("/get_singles_rankings")
+def get_singles_rankings():
+    try:
+        return jsonify({"rankings": compute_rankings_by_type("singles")})
+    except Exception as e:
+        print("🔥 ERROR in /get_singles_rankings:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/get_doubles_rankings")
+def get_doubles_rankings():
+    try:
+        return jsonify({"rankings": compute_rankings_by_type("doubles")})
+    except Exception as e:
+        print("🔥 ERROR in /get_doubles_rankings:", e)
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/get_ongoing_games")
