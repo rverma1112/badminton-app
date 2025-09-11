@@ -2,12 +2,34 @@ import React, { useEffect, useState } from "react";
 
 const OverallRankingScreen = ({ onBack }) => {
   const [rankings, setRankings] = useState([]);
+  const [sortConfig, setSortConfig] = useState({ key: "final_rating", direction: "desc" });
 
   useEffect(() => {
     fetch("https://badminton-api-j9ja.onrender.com/get_rankings")
       .then((res) => res.json())
       .then((data) => setRankings(data.rankings || []));
   }, []);
+
+  const sortedRankings = [...rankings].sort((a, b) => {
+    const { key, direction } = sortConfig;
+    if (a[key] < b[key]) return direction === "asc" ? -1 : 1;
+    if (a[key] > b[key]) return direction === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  const requestSort = (key) => {
+    let direction = "asc";
+    if (sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getHeader = (label, key) => (
+    <th style={thStyle} onClick={() => requestSort(key)}>
+      {label} {sortConfig.key === key ? (sortConfig.direction === "asc" ? "↑" : "↓") : ""}
+    </th>
+  );
 
   return (
     <div style={{ padding: "2rem", maxWidth: "1000px", margin: "0 auto", fontFamily: "Segoe UI, sans-serif" }}>
@@ -16,26 +38,26 @@ const OverallRankingScreen = ({ onBack }) => {
       <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.95rem" }}>
           <thead>
-            <tr style={{ background: "#f0f0f0", textAlign: "left" }}>
+            <tr style={{ background: "#f0f0f0", textAlign: "left", cursor: "pointer" }}>
               <th style={thStyle}>#</th>
               <th style={thStyle}>Player</th>
-              <th style={thStyle}>Played</th>
-              <th style={thStyle}>Won</th>
-              <th style={thStyle}>Lost</th>
-              <th style={thStyle}>Win%</th>
-              <th style={thStyle}>Pt Diff</th>
-              <th style={thStyle}>Rating</th>
+              {getHeader("Played", "played")}
+              {getHeader("Won", "won")}
+              {getHeader("Lost", "lost")}
+              {getHeader("Win%", "win_rate")}
+              {getHeader("Pt Diff", "point_diff")}
+              {getHeader("Rating", "final_rating")}
               <th style={thStyle}>Best Partner</th>
               <th style={thStyle}>Worst Partner</th>
             </tr>
           </thead>
           <tbody>
-            {rankings.map((r, i) => (
+            {sortedRankings.map((r, i) => (
               <tr
                 key={r.name}
                 style={{
                   background: i % 2 === 0 ? "#fff" : "#f9f9f9",
-                  borderBottom: "1px solid #eee"
+                  borderBottom: "1px solid #eee",
                 }}
               >
                 <td style={tdStyle}>{i + 1}</td>
@@ -72,7 +94,7 @@ const OverallRankingScreen = ({ onBack }) => {
             border: "none",
             borderRadius: "6px",
             fontSize: "1rem",
-            cursor: "pointer"
+            cursor: "pointer",
           }}
         >
           ⬅ Back to Home
@@ -86,6 +108,7 @@ const OverallRankingScreen = ({ onBack }) => {
 const thStyle = {
   padding: "12px 10px",
   borderBottom: "2px solid #ddd",
+  userSelect: "none",
 };
 
 // Table cell style
