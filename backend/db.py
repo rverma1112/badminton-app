@@ -305,7 +305,7 @@ def get_overall_rankings():
             "played": played,
             "won": won,
             "lost": lost,
-            "point_diff": round(diff, 2),
+            "point_diff": round(perf_score, 2),
             "win_rate": win_rate,  # ✅ add this
             "win_score": round(win_score, 2),
             "experience_score": round(exp_score, 2),
@@ -501,7 +501,7 @@ def compute_rankings_by_type(match_type="overall"):
             "played": played,
             "won": won,
             "lost": lost,
-            "point_diff": round(diff, 2),
+            "point_diff": round(perf_score, 2),
             "win_rate": round(raw_win, 2),
             "experience_score": round(exp_score, 2),
             "performance_score": round(perf_score, 2),
