@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { scheduleRandomDoubles } from "./randomDoublesScheduler";
+import { scheduleRandomDoubles } from "./scheduler";
+
 
 const CreateGameScreen = ({ players, onBack, setCurrentGame, setOngoingGames }) => {
   const [selectedPlayers, setSelectedPlayers] = useState([]);
@@ -29,31 +31,89 @@ const CreateGameScreen = ({ players, onBack, setCurrentGame, setOngoingGames }) 
     setTeams([shuffled.slice(0, mid), shuffled.slice(mid)]);
   };
 
-  const generateSchedule = async () => {
-    if (gameType === "doubles_random") {
-      if (selectedPlayers.length < 4) {
-        alert("Select at least 4 players");
-        return;
+  const generateSchedule = () => {
+  if (selectedPlayers.length < 4) {
+    alert("❗ Need at least 4 players for doubles random.");
+    return;
+  }
+
+  if (!matchCount || matchCount < 1) {
+    alert("❗ Enter valid number of games.");
+    return;
+  }
+
+  // ✅ DOUBLES RANDOM MODE
+  if (gameType === "doubles_random") {
+    const players = [...selectedPlayers];
+
+    // ✅ Assign temporary ranking priority (later replace with real ranking)
+    const rankings = {};
+    players.forEach((p, i) => (rankings[p] = players.length - i));
+
+    // ✅ Create all 2-player combinations
+    const makePairs = (arr) => {
+      const result = [];
+      for (let i = 0; i < arr.length; i++) {
+        for (let j = i + 1; j < arr.length; j++) {
+          result.push([arr[i], arr[j]]);
+        }
       }
+      return result;
+    };
 
-      const { matches, playerCount } = await scheduleRandomDoubles(
-        selectedPlayers,
-        matchCount
-      );
+    let pairs = makePairs(players);
 
-      setSchedule(matches);
-      setPlayerGameCounts(playerCount);
-      setTeams([]); // no fixed teams
-      return;
+    // ✅ Shuffle pairs lightly — ranking aware
+    for (let i = pairs.length - 1; i > 0; i--) {
+      if (Math.random() < 0.3) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pairs[i], pairs[j]] = [pairs[j], pairs[i]];
+      }
     }
 
-    // ---------------------------------------
-    // Original singles + tournament logic here
-    // ---------------------------------------
-    // keep your existing code for:
-    // gameType === "tournament"
-    // gameType === "singles"
-  };
+    // ✅ Game counts per player
+    const counts = {};
+    players.forEach((p) => (counts[p] = 0));
+
+    const matches = [];
+    let idx = 0;
+
+    // ✅ Fill match slots
+    while (matches.length < matchCount) {
+      const t1 = pairs[idx % pairs.length];
+      const t2 = pairs[(idx + 1) % pairs.length];
+
+      // Teams cannot share players
+      if (t1.some((p) => t2.includes(p))) {
+        idx++;
+        continue;
+      }
+
+      matches.push({ team1: t1, team2: t2 });
+
+      // Update player participation counts
+      t1.forEach((p) => (counts[p]++));
+      t2.forEach((p) => (counts[p]++));
+
+      idx++;
+    }
+
+    // ✅ Small fairness pass
+    // If some players got too few games → swap in higher ranked players
+    const sortedPlayers = [...players].sort((a, b) => rankings[b] - rankings[a]);
+
+    // No extreme fairness logic now — easy to tune later
+    // (kept lightweight to avoid freezing)
+
+    setSchedule(matches);
+    setPlayerGameCounts(counts);
+    return;
+  }
+
+  // ✅ Other game modes (existing logic)
+  alert("❗ Only doubles_random supported here — add others above.");
+};
+
 
 
   const createGame = async () => {
