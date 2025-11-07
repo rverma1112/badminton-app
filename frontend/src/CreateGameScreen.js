@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { scheduleRandomDoubles } from "./randomDoublesScheduler";
 
 const CreateGameScreen = ({ players, onBack, setCurrentGame, setOngoingGames }) => {
   const [selectedPlayers, setSelectedPlayers] = useState([]);
@@ -28,9 +29,32 @@ const CreateGameScreen = ({ players, onBack, setCurrentGame, setOngoingGames }) 
     setTeams([shuffled.slice(0, mid), shuffled.slice(mid)]);
   };
 
-  const generateSchedule = () => {
-    // ... (same logic you already wrote) ✅ just reuse it here
+  const generateSchedule = async () => {
+    if (gameType === "doubles_random") {
+      if (selectedPlayers.length < 4) {
+        alert("Select at least 4 players");
+        return;
+      }
+
+      const { matches, playerCount } = await scheduleRandomDoubles(
+        selectedPlayers,
+        matchCount
+      );
+
+      setSchedule(matches);
+      setPlayerGameCounts(playerCount);
+      setTeams([]); // no fixed teams
+      return;
+    }
+
+    // ---------------------------------------
+    // Original singles + tournament logic here
+    // ---------------------------------------
+    // keep your existing code for:
+    // gameType === "tournament"
+    // gameType === "singles"
   };
+
 
   const createGame = async () => {
     const res = await fetch("https://badminton-api-j9ja.onrender.com/create_game", {
