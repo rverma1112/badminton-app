@@ -1,7 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { scheduleRandomDoubles } from "./randomDoublesScheduler";
-import { scheduleRandomDoubles } from "./scheduler";
-
 
 const CreateGameScreen = ({ players, onBack, setCurrentGame, setOngoingGames }) => {
   const [selectedPlayers, setSelectedPlayers] = useState([]);
@@ -31,80 +28,104 @@ const CreateGameScreen = ({ players, onBack, setCurrentGame, setOngoingGames }) 
     setTeams([shuffled.slice(0, mid), shuffled.slice(mid)]);
   };
 
+  // ✅ Suggest ideal number of matches
+  function suggestMatchCounts(selectedPlayers) {
+    const n = selectedPlayers.length;
+    if (n < 4) return [];
+
+    const base = Math.round(n * 1.5);
+    const max = Math.round(n * 2.5);
+
+    const suggestions = [];
+
+    for (let x = base; x <= max; x += n) {
+      suggestions.push(x);
+    }
+
+    return [base, ...suggestions.slice(1, 3)];
+  }
+
   const generateSchedule = () => {
-  if (selectedPlayers.length < 4) {
-    alert("❗ Need at least 4 players for doubles random.");
-    return;
-  }
+    if (selectedPlayers.length < 4) {
+      alert("❗ Need at least 4 players for doubles random.");
+      return;
+    }
 
-  if (!matchCount || matchCount < 1) {
-    alert("❗ Enter valid number of games.");
-    return;
-  }
+    if (!matchCount || matchCount < 1) {
+      alert("❗ Enter valid number of games.");
+      return;
+    }
 
-  if (gameType !== "doubles_random") {
-    alert("❗ This generator only supports doubles_random.");
-    return;
-  }
+    if (gameType !== "doubles_random") {
+      alert("❗ This generator only supports doubles_random.");
+      return;
+    }
 
-  const players = [...selectedPlayers];
+    // ✅ Safety: warn if too big — helps avoid freeze
+    const maxRecommended = Math.round(selectedPlayers.length * 3);
+    if (matchCount > maxRecommended) {
+      if (
+        !window.confirm(
+          `⚠️ ${matchCount} is high for ${selectedPlayers.length} players.\n` +
+          `Recommended max is ${maxRecommended}.\n\nContinue?`
+        )
+      ) {
+        return;
+      }
+    }
 
-  // Assign temporary rank (replace later w/ real ranking)
-  const rankings = {};
-  players.forEach((p, i) => (rankings[p] = players.length - i));
+    const players = [...selectedPlayers];
 
-  // Player game counters
-  const counts = {};
-  players.forEach((p) => (counts[p] = 0));
+    // Dummy ranking priority (sorted inverse)
+    const rankings = {};
+    players.forEach((p, i) => (rankings[p] = players.length - i));
 
-  // Helper: Get next best player (fewest games, higher rank tiebreak)
-  const pickPlayer = (used = new Set()) => {
-    let avail = players.filter((p) => !used.has(p));
-    avail.sort((a, b) => {
-      if (counts[a] === counts[b]) return rankings[b] - rankings[a];
-      return counts[a] - counts[b];
-    });
-    return avail[0];
+    const counts = {};
+    players.forEach((p) => (counts[p] = 0));
+
+    const pickPlayer = (used = new Set()) => {
+      let avail = players.filter((p) => !used.has(p));
+      avail.sort((a, b) => {
+        if (counts[a] === counts[b]) return rankings[b] - rankings[a];
+        return counts[a] - counts[b];
+      });
+      return avail[0];
+    };
+
+    const makeMatch = () => {
+      const used = new Set();
+
+      const p1 = pickPlayer();
+      used.add(p1);
+
+      const p2 = pickPlayer(used);
+      used.add(p2);
+
+      const p3 = pickPlayer(used);
+      used.add(p3);
+
+      const p4 = pickPlayer(used);
+
+      const arr = [p1, p2, p3, p4].sort(() => Math.random() - 0.5);
+
+      const team1 = [arr[0], arr[1]];
+      const team2 = [arr[2], arr[3]];
+
+      team1.forEach((p) => counts[p]++);
+      team2.forEach((p) => counts[p]++);
+
+      return { team1, team2 };
+    };
+
+    const matches = [];
+
+    for (let i = 0; i < matchCount; i++) {
+      matches.push(makeMatch());
+    }
+
+    setSchedule(matches);
+    setPlayerGameCounts(counts);
   };
-
-  // Create one match
-  const makeMatch = () => {
-    const used = new Set();
-
-    const p1 = pickPlayer();
-    used.add(p1);
-
-    const p2 = pickPlayer(used);
-    used.add(p2);
-
-    const p3 = pickPlayer(used);
-    used.add(p3);
-
-    const p4 = pickPlayer(used);
-
-    // Randomly shuffle team assignment to increase variety
-    const playersArr = [p1, p2, p3, p4].sort(() => Math.random() - 0.5);
-
-    const team1 = [playersArr[0], playersArr[1]];
-    const team2 = [playersArr[2], playersArr[3]];
-
-    team1.forEach((p) => counts[p]++);
-    team2.forEach((p) => counts[p]++);
-
-    return { team1, team2 };
-  };
-
-  const matches = [];
-
-  for (let i = 0; i < matchCount; i++) {
-    matches.push(makeMatch());
-  }
-
-  setSchedule(matches);
-  setPlayerGameCounts(counts);
-};
-
-
 
   const createGame = async () => {
     const res = await fetch("https://badminton-api-j9ja.onrender.com/create_game", {
@@ -128,7 +149,6 @@ const CreateGameScreen = ({ players, onBack, setCurrentGame, setOngoingGames }) 
     onBack();
   };
 
-  // 💅 Styled using the theme
   return (
     <div style={styles.container}>
       <h2 style={styles.heading}>🎮 Create New Game</h2>
@@ -166,6 +186,33 @@ const CreateGameScreen = ({ players, onBack, setCurrentGame, setOngoingGames }) 
           min="1"
           style={styles.select}
         />
+
+        {/* ✅ Suggested counts */}
+        {gameType === "doubles_random" && selectedPlayers.length >= 4 && (
+          <div style={{ marginTop: "0.5rem" }}>
+            <label style={{ fontSize: "0.9rem", color: "#8f8" }}>
+              ✅ Suggested Games:
+            </label>
+            <div style={{ display: "flex", gap: "8px", marginTop: "6px", flexWrap: "wrap" }}>
+              {suggestMatchCounts(selectedPlayers).map((m) => (
+                <button
+                  key={m}
+                  style={{
+                    padding: "6px 12px",
+                    background: "#333",
+                    border: "1px solid #ffff66",
+                    borderRadius: "6px",
+                    color: "#ffff66",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => setMatchCount(m)}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {(gameType === "tournament") && (
@@ -197,6 +244,7 @@ const CreateGameScreen = ({ players, onBack, setCurrentGame, setOngoingGames }) 
               <li key={idx}>{match.team1.join(" & ")} vs {match.team2.join(" & ")}</li>
             ))}
           </ol>
+
           <h4>📊 Player Game Counts</h4>
           <ul>
             {Object.entries(playerGameCounts).map(([p, c]) => (
