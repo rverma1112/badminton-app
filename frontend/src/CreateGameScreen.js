@@ -42,76 +42,66 @@ const CreateGameScreen = ({ players, onBack, setCurrentGame, setOngoingGames }) 
     return;
   }
 
-  // ✅ DOUBLES RANDOM MODE
-  if (gameType === "doubles_random") {
-    const players = [...selectedPlayers];
-
-    // ✅ Assign temporary ranking priority (later replace with real ranking)
-    const rankings = {};
-    players.forEach((p, i) => (rankings[p] = players.length - i));
-
-    // ✅ Create all 2-player combinations
-    const makePairs = (arr) => {
-      const result = [];
-      for (let i = 0; i < arr.length; i++) {
-        for (let j = i + 1; j < arr.length; j++) {
-          result.push([arr[i], arr[j]]);
-        }
-      }
-      return result;
-    };
-
-    let pairs = makePairs(players);
-
-    // ✅ Shuffle pairs lightly — ranking aware
-    for (let i = pairs.length - 1; i > 0; i--) {
-      if (Math.random() < 0.3) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [pairs[i], pairs[j]] = [pairs[j], pairs[i]];
-      }
-    }
-
-    // ✅ Game counts per player
-    const counts = {};
-    players.forEach((p) => (counts[p] = 0));
-
-    const matches = [];
-    let idx = 0;
-
-    // ✅ Fill match slots
-    while (matches.length < matchCount) {
-      const t1 = pairs[idx % pairs.length];
-      const t2 = pairs[(idx + 1) % pairs.length];
-
-      // Teams cannot share players
-      if (t1.some((p) => t2.includes(p))) {
-        idx++;
-        continue;
-      }
-
-      matches.push({ team1: t1, team2: t2 });
-
-      // Update player participation counts
-      t1.forEach((p) => (counts[p]++));
-      t2.forEach((p) => (counts[p]++));
-
-      idx++;
-    }
-
-    // ✅ Small fairness pass
-    // If some players got too few games → swap in higher ranked players
-    const sortedPlayers = [...players].sort((a, b) => rankings[b] - rankings[a]);
-
-    // No extreme fairness logic now — easy to tune later
-    // (kept lightweight to avoid freezing)
-
-    setSchedule(matches);
-    setPlayerGameCounts(counts);
+  if (gameType !== "doubles_random") {
+    alert("❗ This generator only supports doubles_random.");
     return;
   }
 
-  // ✅ Other game modes (existing logic)
-  alert("❗ Only doubles_random supported here — add others above.");
+  const players = [...selectedPlayers];
+
+  // Assign temporary rank (replace later w/ real ranking)
+  const rankings = {};
+  players.forEach((p, i) => (rankings[p] = players.length - i));
+
+  // Player game counters
+  const counts = {};
+  players.forEach((p) => (counts[p] = 0));
+
+  // Helper: Get next best player (fewest games, higher rank tiebreak)
+  const pickPlayer = (used = new Set()) => {
+    let avail = players.filter((p) => !used.has(p));
+    avail.sort((a, b) => {
+      if (counts[a] === counts[b]) return rankings[b] - rankings[a];
+      return counts[a] - counts[b];
+    });
+    return avail[0];
+  };
+
+  // Create one match
+  const makeMatch = () => {
+    const used = new Set();
+
+    const p1 = pickPlayer();
+    used.add(p1);
+
+    const p2 = pickPlayer(used);
+    used.add(p2);
+
+    const p3 = pickPlayer(used);
+    used.add(p3);
+
+    const p4 = pickPlayer(used);
+
+    // Randomly shuffle team assignment to increase variety
+    const playersArr = [p1, p2, p3, p4].sort(() => Math.random() - 0.5);
+
+    const team1 = [playersArr[0], playersArr[1]];
+    const team2 = [playersArr[2], playersArr[3]];
+
+    team1.forEach((p) => counts[p]++);
+    team2.forEach((p) => counts[p]++);
+
+    return { team1, team2 };
+  };
+
+  const matches = [];
+
+  for (let i = 0; i < matchCount; i++) {
+    matches.push(makeMatch());
+  }
+
+  setSchedule(matches);
+  setPlayerGameCounts(counts);
 };
 
 
