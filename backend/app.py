@@ -122,22 +122,32 @@ def save_stats():
 
     return jsonify({"status": "ok"})
 
+from db import SessionLocal, compute_rankings_by_type
+
 @app.route("/get_singles_rankings")
 def get_singles_rankings():
+    db = SessionLocal()
     try:
-        return jsonify({"rankings": compute_rankings_by_type("singles")})
+        rankings = compute_rankings_by_type(db, "singles")
+        return jsonify({"rankings": rankings})
     except Exception as e:
         print("🔥 ERROR in /get_singles_rankings:", e)
         return jsonify({"error": str(e)}), 500
+    finally:
+        db.close()
 
 
 @app.route("/get_doubles_rankings")
 def get_doubles_rankings():
+    db = SessionLocal()
     try:
-        return jsonify({"rankings": compute_rankings_by_type("doubles")})
+        rankings = compute_rankings_by_type(db, "doubles")
+        return jsonify({"rankings": rankings})
     except Exception as e:
         print("🔥 ERROR in /get_doubles_rankings:", e)
         return jsonify({"error": str(e)}), 500
+    finally:
+        db.close()
 
 
 @app.route("/get_ongoing_games")
@@ -183,24 +193,33 @@ def end_game():
     return jsonify({"status": "ok"})
 
 
+from db import SessionLocal, get_overall_rankings
+
 @app.route("/get_rankings")
 def get_rankings():
+    db = SessionLocal()
     try:
-        rankings = get_overall_rankings()
+        rankings = get_overall_rankings(db)
         return jsonify({"rankings": rankings})
     except Exception as e:
         print("🔥 ERROR in /get_rankings:", e)
         return jsonify({"error": str(e)}), 500
+    finally:
+        db.close()
 
+
+
+from db import get_player_profile
 
 @app.route("/get_player_profile")
 def get_player_profile_route():
+    db = SessionLocal()
     try:
         player_name = request.args.get("name")
         if not player_name:
             return jsonify({"error": "Missing player name"}), 400
 
-        profile = get_player_profile(player_name)
+        profile = get_player_profile(db, player_name)
         if profile is None:
             return jsonify({"error": "Player not found"}), 404
 
@@ -208,6 +227,8 @@ def get_player_profile_route():
     except Exception as e:
         print("🔥 ERROR in /get_player_profile:", e)
         return jsonify({"error": str(e)}), 500
+    finally:
+        db.close()
 
 
 
