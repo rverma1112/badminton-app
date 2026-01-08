@@ -113,6 +113,101 @@ const PlayerProfileScreen = () => {
             <strong>{profile.win_rate}%</strong> | Avg Pt Diff:{" "}
             <strong>{profile.avg_point_diff}</strong>
           </p>
+          {/* Partnerships */}
+<div style={{ marginTop: "1rem" }}>
+  <h3>🤝 Partnerships</h3>
+  <p>
+    🥇 Best Partner:{" "}
+    {profile.best_partner
+      ? `${profile.best_partner.name} (${profile.best_partner.win_pct}%)`
+      : "N/A"}
+  </p>
+  <p>
+    😓 Worst Partner:{" "}
+    {profile.worst_partner
+      ? `${profile.worst_partner.name} (${profile.worst_partner.win_pct}%)`
+      : "N/A"}
+  </p>
+</div>
+
+{/* Opponents */}
+<div style={{ marginTop: "1rem" }}>
+  <h3>⚔️ Opponents</h3>
+  <p>
+    🧠 Favourite Opponent:{" "}
+    {profile.favourite_opponent
+      ? `${profile.favourite_opponent.name} (${profile.favourite_opponent.win_pct}%)`
+      : "N/A"}
+  </p>
+  <p>
+    🔥 Toughest Opponent:{" "}
+    {profile.least_favourite_opponent
+      ? `${profile.least_favourite_opponent.name} (${profile.least_favourite_opponent.win_pct}%)`
+      : "N/A"}
+  </p>
+</div>
+
+{/* Matches With Each */}
+<div style={{ marginTop: "1rem" }}>
+  <h3>👥 Matches With Each Player</h3>
+  {profile.matches_with_each.length === 0 ? (
+    <p>No data available</p>
+  ) : (
+    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <thead>
+        <tr>
+          <th style={thStyle}>Player</th>
+          <th style={thStyle}>Matches</th>
+          <th style={thStyle}>Wins</th>
+          <th style={thStyle}>Losses</th>
+          <th style={thStyle}>Win %</th>
+        </tr>
+      </thead>
+      <tbody>
+        {profile.matches_with_each.map((p) => (
+          <tr key={p.player}>
+            <td style={tdStyle}>{p.player}</td>
+            <td style={tdStyle}>{p.matches_played}</td>
+            <td style={tdStyle}>{p.wins}</td>
+            <td style={tdStyle}>{p.losses}</td>
+            <td style={tdStyle}>{p.win_pct}%</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+</div>
+
+{/* Matches Against Each */}
+<div style={{ marginTop: "1rem" }}>
+  <h3>🛡️ Matches Against Each Player</h3>
+  {profile.matches_against_each.length === 0 ? (
+    <p>No data available</p>
+  ) : (
+    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <thead>
+        <tr>
+          <th style={thStyle}>Player</th>
+          <th style={thStyle}>Matches</th>
+          <th style={thStyle}>Wins</th>
+          <th style={thStyle}>Losses</th>
+          <th style={thStyle}>Win %</th>
+        </tr>
+      </thead>
+      <tbody>
+        {profile.matches_against_each.map((p) => (
+          <tr key={p.player}>
+            <td style={tdStyle}>{p.player}</td>
+            <td style={tdStyle}>{p.matches_played}</td>
+            <td style={tdStyle}>{p.wins}</td>
+            <td style={tdStyle}>{p.losses}</td>
+            <td style={tdStyle}>{p.win_pct}%</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+</div>
 
           <div style={{ marginTop: "2rem" }}>
             <h3>📈 Rating Progression</h3>
