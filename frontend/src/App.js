@@ -16,17 +16,29 @@ const API = "https://badminton-api-j9ja.onrender.com";
 const App = () => {
   const navigate = useNavigate();
 
-  const [players, setPlayers] = useState([]);
+  //const [players, setPlayers] = useState([]);
+  const [players, setPlayers] = useState(() => {
+  const cached = localStorage.getItem("players");
+  return cached ? JSON.parse(cached) : [];
+});
+
   const [currentGame, setCurrentGame] = useState(null);
   const [ongoingGames, setOngoingGames] = useState([]);
   const [dailyStats, setDailyStats] = useState([]);
 
-  // Load players (initial)
   useEffect(() => {
-    fetch(`${API}/get_players`)
-      .then((res) => res.json())
-      .then((data) => setPlayers(data));
-  }, []);
+  if (players.length > 0) return;
+
+  fetch(`${API}/get_players`)
+    .then((res) => res.json())
+    .then((data) => {
+      const list = data || [];
+      setPlayers(list);
+      localStorage.setItem("players", JSON.stringify(list));
+    })
+    .catch(() => setPlayers([]));
+}, [players]);
+
 
   // Load ongoing games
   useEffect(() => {
@@ -151,6 +163,8 @@ const App = () => {
       r.json()
     );
     setPlayers(updatedPlayers);
+    localStorage.setItem("players", JSON.stringify(updatedPlayers));
+
   };
 
   return (
