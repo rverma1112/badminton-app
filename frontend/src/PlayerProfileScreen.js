@@ -264,5 +264,16 @@ const PlayerProfileScreen = () => {
     </div>
   );
 };
+const thStyle = {
+  border: "1px solid #ccc",
+  padding: "6px",
+  backgroundColor: "#f5f5f5",
+  textAlign: "left",
+};
+
+const tdStyle = {
+  border: "1px solid #ccc",
+  padding: "6px",
+};
 
 export default PlayerProfileScreen;
