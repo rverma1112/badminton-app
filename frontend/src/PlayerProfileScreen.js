@@ -16,7 +16,7 @@ const API = "https://badminton-api-j9ja.onrender.com";
 const PlayerProfileScreen = () => {
   const navigate = useNavigate();
 
-  // 🔹 Players (cached)
+  // 🔹 Players (cache-first)
   const [players, setPlayers] = useState(() => {
     const cached = localStorage.getItem("players");
     return cached ? JSON.parse(cached) : [];
@@ -26,26 +26,31 @@ const PlayerProfileScreen = () => {
   const [profile, setProfile] = useState(null);
 
   // ----------------------------------
-  // 1️⃣ Load players (cache-first)
+  // 1️⃣ Load players (eslint-safe)
   // ----------------------------------
   useEffect(() => {
-    if (players.length > 0) {
+    // If players already exist, just select first player once
+    if (players.length > 0 && !selectedPlayer) {
       setSelectedPlayer(players[0]);
       return;
     }
 
-    fetch(`${API}/get_players`)
-      .then((res) => res.json())
-      .then((data) => {
-        setPlayers(data || []);
-        localStorage.setItem("players", JSON.stringify(data || []));
-        if (data && data.length) setSelectedPlayer(data[0]);
-      })
-      .catch(() => {
-        setPlayers([]);
-        setSelectedPlayer("");
-      });
-  }, []);
+    // Fetch only if players list is empty
+    if (players.length === 0) {
+      fetch(`${API}/get_players`)
+        .then((res) => res.json())
+        .then((data) => {
+          const list = data || [];
+          setPlayers(list);
+          localStorage.setItem("players", JSON.stringify(list));
+          if (list.length > 0) setSelectedPlayer(list[0]);
+        })
+        .catch(() => {
+          setPlayers([]);
+          setSelectedPlayer("");
+        });
+    }
+  }, [players, selectedPlayer]); // ✅ ESLint-compliant
 
   // ----------------------------------
   // 2️⃣ Load profile (player-specific cache)
@@ -108,38 +113,6 @@ const PlayerProfileScreen = () => {
             <strong>{profile.win_rate}%</strong> | Avg Pt Diff:{" "}
             <strong>{profile.avg_point_diff}</strong>
           </p>
-
-          <div style={{ marginTop: "1rem" }}>
-            <h3>🤝 Partnerships</h3>
-            <p>
-              🥇 Best Partner:{" "}
-              {profile.best_partner
-                ? `${profile.best_partner.name} (${profile.best_partner.win_pct}%)`
-                : "N/A"}
-            </p>
-            <p>
-              😓 Worst Partner:{" "}
-              {profile.worst_partner
-                ? `${profile.worst_partner.name} (${profile.worst_partner.win_pct}%)`
-                : "N/A"}
-            </p>
-          </div>
-
-          <div style={{ marginTop: "1rem" }}>
-            <h3>⚔️ Opponents</h3>
-            <p>
-              🧠 Favourite Opponent:{" "}
-              {profile.favourite_opponent
-                ? `${profile.favourite_opponent.name} (${profile.favourite_opponent.win_pct}%)`
-                : "N/A"}
-            </p>
-            <p>
-              🔥 Toughest Opponent:{" "}
-              {profile.least_favourite_opponent
-                ? `${profile.least_favourite_opponent.name} (${profile.least_favourite_opponent.win_pct}%)`
-                : "N/A"}
-            </p>
-          </div>
 
           <div style={{ marginTop: "2rem" }}>
             <h3>📈 Rating Progression</h3>
