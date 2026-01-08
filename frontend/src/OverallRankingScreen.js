@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-const OverallRankingScreen = ({ onBack }) => {
+const OverallRankingScreen = () => {
+  const navigate = useNavigate();
+
   const [overall, setOverall] = useState([]);
   const [singles, setSingles] = useState([]);
   const [doubles, setDoubles] = useState([]);
@@ -21,7 +24,9 @@ const OverallRankingScreen = ({ onBack }) => {
 
   const renderTable = (title, rankings) => (
     <div style={{ marginBottom: "2rem" }}>
-      <h3 style={{ textAlign: "center", marginBottom: "0.5rem" }}>{title}</h3>
+      <h3 style={{ textAlign: "center", marginBottom: "0.5rem" }}>
+        {title}
+      </h3>
       <div style={{ overflowX: "auto" }}>
         <table
           style={{
@@ -96,7 +101,7 @@ const OverallRankingScreen = ({ onBack }) => {
 
       <div style={{ textAlign: "center", marginTop: "2rem" }}>
         <button
-          onClick={onBack}
+          onClick={() => navigate("/")}
           style={{
             padding: "10px 20px",
             background: "#6c757d",

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   LineChart,
   Line,
@@ -10,17 +11,35 @@ import {
   ResponsiveContainer
 } from "recharts";
 
-const PlayerProfileScreen = ({ onBack }) => {
-  const [players, setPlayers] = useState([]);
+const API = "https://badminton-api-j9ja.onrender.com";
+
+const PlayerProfileScreen = () => {
+  const navigate = useNavigate();
+
+  // 🔹 Players (cached)
+  const [players, setPlayers] = useState(() => {
+    const cached = localStorage.getItem("players");
+    return cached ? JSON.parse(cached) : [];
+  });
+
   const [selectedPlayer, setSelectedPlayer] = useState("");
   const [profile, setProfile] = useState(null);
 
+  // ----------------------------------
+  // 1️⃣ Load players (cache-first)
+  // ----------------------------------
   useEffect(() => {
-    fetch("https://badminton-api-j9ja.onrender.com/get_players")
+    if (players.length > 0) {
+      setSelectedPlayer(players[0]);
+      return;
+    }
+
+    fetch(`${API}/get_players`)
       .then((res) => res.json())
       .then((data) => {
         setPlayers(data || []);
-        setSelectedPlayer((data && data.length) ? data[0] : "");
+        localStorage.setItem("players", JSON.stringify(data || []));
+        if (data && data.length) setSelectedPlayer(data[0]);
       })
       .catch(() => {
         setPlayers([]);
@@ -28,14 +47,31 @@ const PlayerProfileScreen = ({ onBack }) => {
       });
   }, []);
 
+  // ----------------------------------
+  // 2️⃣ Load profile (player-specific cache)
+  // ----------------------------------
   useEffect(() => {
     if (!selectedPlayer) {
       setProfile(null);
       return;
     }
-    fetch(`https://badminton-api-j9ja.onrender.com/get_player_profile?name=${encodeURIComponent(selectedPlayer)}`)
+
+    const cacheKey = `player_profile_${selectedPlayer}`;
+    const cachedProfile = localStorage.getItem(cacheKey);
+
+    if (cachedProfile) {
+      setProfile(JSON.parse(cachedProfile));
+      return;
+    }
+
+    fetch(
+      `${API}/get_player_profile?name=${encodeURIComponent(selectedPlayer)}`
+    )
       .then((res) => res.json())
-      .then((data) => setProfile(data))
+      .then((data) => {
+        setProfile(data);
+        localStorage.setItem(cacheKey, JSON.stringify(data));
+      })
       .catch((err) => {
         console.error("Failed to load profile:", err);
         setProfile(null);
@@ -67,7 +103,8 @@ const PlayerProfileScreen = ({ onBack }) => {
         <>
           <p>
             Matches: <strong>{profile.played}</strong> | Wins:{" "}
-            <strong>{profile.won}</strong> | Losses: <strong>{profile.lost}</strong> | Win Rate:{" "}
+            <strong>{profile.won}</strong> | Losses:{" "}
+            <strong>{profile.lost}</strong> | Win Rate:{" "}
             <strong>{profile.win_rate}%</strong> | Avg Pt Diff:{" "}
             <strong>{profile.avg_point_diff}</strong>
           </p>
@@ -104,80 +141,36 @@ const PlayerProfileScreen = ({ onBack }) => {
             </p>
           </div>
 
-          {/* Matches With Each */}
-          <div style={{ marginTop: "1rem" }}>
-            <h3>👥 Matches With Each Player</h3>
-            {profile.matches_with_each.length === 0 ? (
-              <p>No data available</p>
-            ) : (
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr>
-                    <th style={{ border: "1px solid #ccc", padding: "4px" }}>Player</th>
-                    <th style={{ border: "1px solid #ccc", padding: "4px" }}>Matches</th>
-                    <th style={{ border: "1px solid #ccc", padding: "4px" }}>Wins</th>
-                    <th style={{ border: "1px solid #ccc", padding: "4px" }}>Losses</th>
-                    <th style={{ border: "1px solid #ccc", padding: "4px" }}>Win %</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {profile.matches_with_each.map((p) => (
-                    <tr key={p.player}>
-                      <td style={{ border: "1px solid #ccc", padding: "4px" }}>{p.player}</td>
-                      <td style={{ border: "1px solid #ccc", padding: "4px" }}>{p.matches_played}</td>
-                      <td style={{ border: "1px solid #ccc", padding: "4px" }}>{p.wins}</td>
-                      <td style={{ border: "1px solid #ccc", padding: "4px" }}>{p.losses}</td>
-                      <td style={{ border: "1px solid #ccc", padding: "4px" }}>{p.win_pct}%</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-
-          {/* Matches Against Each */}
-          <div style={{ marginTop: "1rem" }}>
-            <h3>🛡️ Matches Against Each Player</h3>
-            {profile.matches_against_each.length === 0 ? (
-              <p>No data available</p>
-            ) : (
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr>
-                    <th style={{ border: "1px solid #ccc", padding: "4px" }}>Player</th>
-                    <th style={{ border: "1px solid #ccc", padding: "4px" }}>Matches</th>
-                    <th style={{ border: "1px solid #ccc", padding: "4px" }}>Wins</th>
-                    <th style={{ border: "1px solid #ccc", padding: "4px" }}>Losses</th>
-                    <th style={{ border: "1px solid #ccc", padding: "4px" }}>Win %</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {profile.matches_against_each.map((p) => (
-                    <tr key={p.player}>
-                      <td style={{ border: "1px solid #ccc", padding: "4px" }}>{p.player}</td>
-                      <td style={{ border: "1px solid #ccc", padding: "4px" }}>{p.matches_played}</td>
-                      <td style={{ border: "1px solid #ccc", padding: "4px" }}>{p.wins}</td>
-                      <td style={{ border: "1px solid #ccc", padding: "4px" }}>{p.losses}</td>
-                      <td style={{ border: "1px solid #ccc", padding: "4px" }}>{p.win_pct}%</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-
           <div style={{ marginTop: "2rem" }}>
             <h3>📈 Rating Progression</h3>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={profile.rating_progression}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" tickFormatter={(val) => val.split("T")[0]} />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={(val) => val.split("T")[0]}
+                />
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Line type="monotone" dataKey="rating" stroke="#8884d8" name="Rating" />
-                <Line type="monotone" dataKey="win_rate" stroke="#82ca9d" name="Win %" />
-                <Line type="monotone" dataKey="point_diff" stroke="#ff7300" name="Pt Diff" />
+                <Line
+                  type="monotone"
+                  dataKey="rating"
+                  stroke="#8884d8"
+                  name="Rating"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="win_rate"
+                  stroke="#82ca9d"
+                  name="Win %"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="point_diff"
+                  stroke="#ff7300"
+                  name="Pt Diff"
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -185,7 +178,20 @@ const PlayerProfileScreen = ({ onBack }) => {
       )}
 
       <div style={{ textAlign: "center", marginTop: "2rem" }}>
-        <button onClick={onBack}>⬅ Back</button>
+        <button
+          onClick={() => navigate("/")}
+          style={{
+            padding: "10px 16px",
+            backgroundColor: "#6c757d",
+            color: "white",
+            border: "none",
+            borderRadius: "6px",
+            fontWeight: "bold",
+            cursor: "pointer",
+          }}
+        >
+          ⬅ Back to Home
+        </button>
       </div>
     </div>
   );

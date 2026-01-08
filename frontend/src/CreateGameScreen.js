@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
-const CreateGameScreen = ({ players, onBack, setCurrentGame, setOngoingGames }) => {
+const CreateGameScreen = ({ players, setCurrentGame, setOngoingGames }) => {
+  const navigate = useNavigate();
   const [selectedPlayers, setSelectedPlayers] = useState([]);
   const [matchCount, setMatchCount] = useState(3);
   const [teams, setTeams] = useState([]);
@@ -146,7 +148,8 @@ const CreateGameScreen = ({ players, onBack, setCurrentGame, setOngoingGames }) 
     const updated = await fetch("https://badminton-api-j9ja.onrender.com/get_ongoing_games")
       .then((res) => res.json());
     setOngoingGames(updated.games);
-    onBack();
+    navigate("/game");
+
   };
 
   return (
@@ -256,7 +259,13 @@ const CreateGameScreen = ({ players, onBack, setCurrentGame, setOngoingGames }) 
 
       <div style={styles.buttonRow}>
         <button className="primary-button" onClick={createGame}>✅ Start Game</button>
-        <button onClick={onBack} style={styles.backBtn}>🔙 Back</button>
+        <button
+  onClick={() => navigate("/", { replace: true })}
+  style={styles.backBtn}
+>
+  🔙 Back
+</button>
+
       </div>
     </div>
   );

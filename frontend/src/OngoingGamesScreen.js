@@ -1,17 +1,24 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 
-const OngoingGamesScreen = ({ ongoingGames, setCurrentGame, setScreen, onBack }) => {
+const OngoingGamesScreen = ({ ongoingGames, setCurrentGame }) => {
+  const navigate = useNavigate();
+
   const handleClick = (game) => {
     setCurrentGame(game);
-    setScreen("game");
+    navigate("/game");
   };
 
   return (
     <div style={{ padding: "2rem", maxWidth: "600px", margin: "0 auto" }}>
-      <h2 style={{ textAlign: "center", marginBottom: "1.5rem" }}>🟢 Ongoing Games</h2>
+      <h2 style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+        🟢 Ongoing Games
+      </h2>
 
       {ongoingGames.length === 0 ? (
-        <p style={{ textAlign: "center", color: "#888" }}>No ongoing games at the moment.</p>
+        <p style={{ textAlign: "center", color: "#888" }}>
+          No ongoing games at the moment.
+        </p>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           {ongoingGames.map((game) => (
@@ -28,10 +35,15 @@ const OngoingGamesScreen = ({ ongoingGames, setCurrentGame, setScreen, onBack })
               onClick={() => handleClick(game)}
             >
               <strong>Game #{game.id}</strong>
-              <p><strong>Players:</strong> {game.players.join(", ")}</p>
-              <p><strong>Matches:</strong> {game.matches?.length ?? 0}</p>
+              <p>
+                <strong>Players:</strong> {game.players.join(", ")}
+              </p>
+              <p>
+                <strong>Matches:</strong> {game.matches?.length ?? 0}
+              </p>
               <p style={{ fontSize: "0.9rem", color: "#555" }}>
-                <strong>Created:</strong> {new Date(game.created_at).toLocaleString()}
+                <strong>Created:</strong>{" "}
+                {new Date(game.created_at).toLocaleString()}
               </p>
             </div>
           ))}
@@ -39,7 +51,7 @@ const OngoingGamesScreen = ({ ongoingGames, setCurrentGame, setScreen, onBack })
       )}
 
       <button
-        onClick={onBack}
+        onClick={() => navigate("/")}
         style={{
           marginTop: "2rem",
           padding: "10px 16px",

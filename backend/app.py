@@ -31,6 +31,15 @@ ongoing_games = {}
 games = []
 game_id_counter = 1
 
+# Caches
+RANKINGS_CACHE = {
+    "overall": None,
+    "singles": None,
+    "doubles": None
+}
+
+PLAYER_PROFILE_CACHE = {}
+
 # ---- Match Scheduling Logic ---- #
 def generate_balanced_schedule(team1, team2, total_matches):
     team1_pairs = list(itertools.combinations(team1, 2))
@@ -126,28 +135,32 @@ from db import SessionLocal, compute_rankings_by_type
 
 @app.route("/get_singles_rankings")
 def get_singles_rankings():
+    if RANKINGS_CACHE["singles"] is not None:
+        return jsonify({"rankings": RANKINGS_CACHE["singles"]})
+
     db = SessionLocal()
     try:
         rankings = compute_rankings_by_type(db, "singles")
+        RANKINGS_CACHE["singles"] = rankings
         return jsonify({"rankings": rankings})
-    except Exception as e:
-        print("🔥 ERROR in /get_singles_rankings:", e)
-        return jsonify({"error": str(e)}), 500
     finally:
         db.close()
+
 
 
 @app.route("/get_doubles_rankings")
 def get_doubles_rankings():
+    if RANKINGS_CACHE["doubles"] is not None:
+        return jsonify({"rankings": RANKINGS_CACHE["doubles"]})
+
     db = SessionLocal()
     try:
         rankings = compute_rankings_by_type(db, "doubles")
+        RANKINGS_CACHE["doubles"] = rankings
         return jsonify({"rankings": rankings})
-    except Exception as e:
-        print("🔥 ERROR in /get_doubles_rankings:", e)
-        return jsonify({"error": str(e)}), 500
     finally:
         db.close()
+
 
 
 @app.route("/get_ongoing_games")
@@ -156,6 +169,8 @@ def get_ongoing_games():
     return jsonify({"games": games})
 
 from db import save_completed_game_and_stats
+
+
 
 @app.route("/complete_game", methods=["POST"])
 def complete_game():
@@ -168,11 +183,21 @@ def complete_game():
         if not stats:
             return jsonify({"status": "error", "message": "Missing stats"}), 400
 
+        # 1️⃣ Save data to DB
         save_completed_game_and_stats(data, stats)
+
+        # 2️⃣ 🔥 STEP 5 — invalidate backend cache
+        RANKINGS_CACHE["overall"] = None
+        RANKINGS_CACHE["singles"] = None
+        RANKINGS_CACHE["doubles"] = None
+        PLAYER_PROFILE_CACHE.clear()
+
         return jsonify({"status": "ok"})
+
     except Exception as e:
         print("🔥 Error in /complete_game:", e)
         return jsonify({"status": "error", "message": str(e)}), 500
+
 
 
 
@@ -197,9 +222,13 @@ from db import SessionLocal, get_overall_rankings
 
 @app.route("/get_rankings")
 def get_rankings():
+    if RANKINGS_CACHE["overall"] is not None:
+        return jsonify({"rankings": RANKINGS_CACHE["overall"]})
+
     db = SessionLocal()
     try:
         rankings = get_overall_rankings(db)
+        RANKINGS_CACHE["overall"] = rankings
         return jsonify({"rankings": rankings})
     except Exception as e:
         print("🔥 ERROR in /get_rankings:", e)
@@ -209,26 +238,29 @@ def get_rankings():
 
 
 
+
 from db import get_player_profile
 
 @app.route("/get_player_profile")
 def get_player_profile_route():
+    player_name = request.args.get("name")
+    if not player_name:
+        return jsonify({"error": "Missing player name"}), 400
+
+    if player_name in PLAYER_PROFILE_CACHE:
+        return jsonify(PLAYER_PROFILE_CACHE[player_name])
+
     db = SessionLocal()
     try:
-        player_name = request.args.get("name")
-        if not player_name:
-            return jsonify({"error": "Missing player name"}), 400
-
         profile = get_player_profile(db, player_name)
         if profile is None:
             return jsonify({"error": "Player not found"}), 404
 
+        PLAYER_PROFILE_CACHE[player_name] = profile
         return jsonify(profile)
-    except Exception as e:
-        print("🔥 ERROR in /get_player_profile:", e)
-        return jsonify({"error": str(e)}), 500
     finally:
         db.close()
+
 
 
 
@@ -255,12 +287,24 @@ def handle_delete_game():
         if game_id is None:
             return jsonify({"status": "error", "message": "game_id is required"}), 400
 
+        # 1️⃣ Delete game from DB
         delete_game(game_id)
-        return jsonify({"status": "ok", "message": f"Game {game_id} deleted."})
-    
+
+        # 2️⃣ 🔥 STEP 5 — invalidate backend cache
+        RANKINGS_CACHE["overall"] = None
+        RANKINGS_CACHE["singles"] = None
+        RANKINGS_CACHE["doubles"] = None
+        PLAYER_PROFILE_CACHE.clear()
+
+        return jsonify({
+            "status": "ok",
+            "message": f"Game {game_id} deleted."
+        })
+
     except Exception as e:
         print("Error in /delete_game:", e)
         return jsonify({"status": "error", "message": str(e)}), 500
+
 
 
 if __name__ == "__main__":

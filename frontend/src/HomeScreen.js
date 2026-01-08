@@ -1,14 +1,16 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 
-const HomeScreen = ({ setScreen, ongoingGames = [] }) => {
+const HomeScreen = ({ ongoingGames = [] }) => {
+  const navigate = useNavigate();
+
   const buttons = [
-    { label: "CREATE GAME", screen: "newGame" },
-    { label: "ADD NEW PLAYER", screen: "addPlayer" },
-    { label: "VIEW RANKINGS", screen: "rankings" },
-    { label: "ONGOING GAMES", screen: "ongoing" },
-    { label: "VIEW PREVIOUS GAMES", screen: "games" },
-    { label: "VIEW PROFILES", screen: "profile" },
-    { label: "INFO", screen: "info" },
+    { label: "CREATE GAME", route: "/create" },
+    { label: "ADD NEW PLAYER", route: "/add-player" },
+    { label: "VIEW RANKINGS", route: "/rankings" },
+    { label: "ONGOING GAMES", route: "/ongoing" },
+    { label: "VIEW PREVIOUS GAMES", route: "/previous" },
+    { label: "VIEW PROFILES", route: "/profile" },
   ];
 
   return (
@@ -24,12 +26,15 @@ const HomeScreen = ({ setScreen, ongoingGames = [] }) => {
         {buttons.map((btn, i) => (
           <div
             key={i}
-            style={{ ...styles.card, backgroundImage: `
-            linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)),
-            url('/wave-overlay.svg'),
-            url('/bg${i % 4 + 1}.png')
-        `, }}
-            onClick={() => setScreen(btn.screen)}
+            style={{
+              ...styles.card,
+              backgroundImage: `
+                linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)),
+                url('/wave-overlay.svg'),
+                url('/bg${i % 4 + 1}.png')
+              `,
+            }}
+            onClick={() => navigate(btn.route)}
           >
             <span style={styles.cardText}>{btn.label}</span>
           </div>
@@ -55,31 +60,23 @@ const styles = {
     alignItems: "center",
     gap: "1rem",
   },
-  logoSymbol: {
-    width: "40px",
-    height: "40px",
-    background: "linear-gradient(45deg,red, #7fff00, #00ffff)",
-    borderRadius: "8px",
-  },
   logoText: {
     fontSize: "1.5rem",
     fontWeight: "bold",
     color: "#ffff66",
     margin: 0,
   },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-    gap: "1.5rem",
-  },
   logoImage: {
     width: "40px",
     height: "40px",
     borderRadius: "8px",
     boxShadow: "0 0 6px #ffff66",
-    // background: "linear-gradient(45deg,red, #7fff00, #00ffff)"
-},
-
+  },
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+    gap: "1.5rem",
+  },
   card: {
     position: "relative",
     border: "1px solid #ffff66",

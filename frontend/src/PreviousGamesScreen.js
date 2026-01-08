@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-const PreviousGamesScreen = ({ onBack }) => {
+const PreviousGamesScreen = () => {
+  const navigate = useNavigate();
   const [games, setGames] = useState([]);
 
   useEffect(() => {
@@ -23,11 +25,14 @@ const PreviousGamesScreen = ({ onBack }) => {
     if (!confirmDelete) return;
 
     try {
-      const res = await fetch("https://badminton-api-j9ja.onrender.com/delete_game", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ game_id: id }),
-      });
+      const res = await fetch(
+        "https://badminton-api-j9ja.onrender.com/delete_game",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ game_id: id }),
+        }
+      );
 
       const data = await res.json();
 
@@ -44,9 +49,34 @@ const PreviousGamesScreen = ({ onBack }) => {
   };
 
   return (
-    <div>
-      <h2>📚 Previous Games</h2>
-      <button onClick={onBack}>🔙 Back</button>
+    <div style={{ padding: "2rem", maxWidth: "900px", margin: "0 auto" }}>
+      <h2 style={{ textAlign: "center", marginBottom: "1rem" }}>
+        📚 Previous Games
+      </h2>
+
+      <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+        <button
+          onClick={() => navigate("/")}
+          style={{
+            padding: "10px 16px",
+            backgroundColor: "#6c757d",
+            color: "white",
+            border: "none",
+            borderRadius: "6px",
+            fontWeight: "bold",
+            cursor: "pointer",
+          }}
+        >
+          🔙 Back to Home
+        </button>
+      </div>
+
+      {games.length === 0 && (
+        <p style={{ textAlign: "center", color: "#888" }}>
+          No completed games found.
+        </p>
+      )}
+
       {games.map((game) => (
         <div
           key={game.id}
@@ -58,7 +88,9 @@ const PreviousGamesScreen = ({ onBack }) => {
             backgroundColor: "#f8f8f8",
           }}
         >
-          <p><strong>Game #{game.id}</strong></p>
+          <p>
+            <strong>Game #{game.id}</strong>
+          </p>
           <p>Players: {game.players.join(", ")}</p>
           <p>Matches: {game.match_count}</p>
           <p>Started: {new Date(game.created_at).toLocaleString()}</p>
@@ -76,7 +108,9 @@ const PreviousGamesScreen = ({ onBack }) => {
                 res.team1 == null ||
                 res.team2 == null
               ) {
-                return <li key={idx}>Match {idx + 1}: Incomplete data</li>;
+                return (
+                  <li key={idx}>Match {idx + 1}: Incomplete data</li>
+                );
               }
 
               return (
@@ -98,7 +132,7 @@ const PreviousGamesScreen = ({ onBack }) => {
               border: "none",
               borderRadius: "4px",
               cursor: "pointer",
-              fontWeight: "bold"
+              fontWeight: "bold",
             }}
           >
             🗑️ Delete Game
