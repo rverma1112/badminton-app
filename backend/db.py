@@ -9,8 +9,27 @@ import psycopg2
 # --- Configuration ---
 DATABASE_URL = "postgresql://postgres.stnxjphrwhbwhxkggtvs:Rv%4096216@aws-0-ap-south-1.pooler.supabase.com:6543/postgres"
 
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(bind=engine)
+#engine = create_engine(DATABASE_URL)
+from sqlalchemy import create_engine
+
+engine = create_engine(
+    DATABASE_URL,
+    pool_size=3,          # VERY IMPORTANT
+    max_overflow=0,       # NO extra connections
+    pool_timeout=30,
+    pool_recycle=1800,
+    pool_pre_ping=True
+)
+
+
+
+#SessionLocal = sessionmaker(bind=engine)
+from sqlalchemy.orm import scoped_session, sessionmaker
+
+SessionLocal = scoped_session(
+    sessionmaker(bind=engine, autocommit=False, autoflush=False)
+)
+
 Base = declarative_base()
 
 # --- Raw psycopg2 connection for manual SQL queries ---
