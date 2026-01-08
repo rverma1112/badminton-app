@@ -20,6 +20,11 @@ CORS(app)
 
 # Initialize database on server start
 #init_db()
+
+@app.route("/")
+def root():
+    return "OK", 200
+
 ongoing_games = {}
 
 # In-memory game storage
