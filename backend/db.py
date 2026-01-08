@@ -235,27 +235,150 @@ def delete_game(game_id):
     db.commit()
     db.close()
 
-def get_overall_rankings():
-    conn = get_connection()
-    cur = conn.cursor()
-    cur.execute("""
-        SELECT player, SUM(played), SUM(won), SUM(lost), SUM(point_diff)
-        FROM player_stats GROUP BY player
-    """)
-    raw_stats = cur.fetchall()
+# def get_overall_rankings():
+#     conn = get_connection()
+#     cur = conn.cursor()
+#     cur.execute("""
+#         SELECT player, SUM(played), SUM(won), SUM(lost), SUM(point_diff)
+#         FROM player_stats GROUP BY player
+#     """)
+#     raw_stats = cur.fetchall()
 
-    cur.execute("SELECT matches, results FROM completed_games")
-    games = cur.fetchall()
-    conn.close()
+#     cur.execute("SELECT matches, results FROM completed_games")
+#     games = cur.fetchall()
+#     conn.close()
+
+#     if not raw_stats:
+#         return []
+
+#     # Partner win% logic
+#     partner_stats = {}
+#     for matches, results in games:
+#         if not matches or not results:
+#             continue
+#         for match, result in zip(matches, results):
+#             t1, t2 = match["team1"], match["team2"]
+#             s1, s2 = int(result["team1"]), int(result["team2"])
+#             t1_won = s1 > s2
+
+#             def add(p1, p2, won):
+#                 key = tuple(sorted([p1, p2]))
+#                 if key not in partner_stats:
+#                     partner_stats[key] = [0, 0]
+#                 if won:
+#                     partner_stats[key][0] += 1
+#                 partner_stats[key][1] += 1
+
+#             if len(t1) == 2:
+#                 add(t1[0], t1[1], t1_won)
+#             if len(t2) == 2:
+#                 add(t2[0], t2[1], not t1_won)
+
+#     player_to_partners = {}
+#     for (p1, p2), (wins, total) in partner_stats.items():
+#         for a, b in [(p1, p2), (p2, p1)]:
+#             player_to_partners.setdefault(a, []).append({
+#                 "partner": b, "wins": wins, "total": total,
+#                 "win_pct": round((wins / total) * 100, 2) if total else 0
+#             })
+
+#     # Normalize performance, win%, experience
+#     max_played = max(row[1] for row in raw_stats)
+#     diffs = [row[4] for row in raw_stats]
+#     min_diff = min(diffs)
+#     max_diff = max(diffs)
+#     raw_win_rates = [(row[0], (row[2] / row[1]) * 100 if row[1] else 0) for row in raw_stats]
+#     max_win_rate = max(w for _, w in raw_win_rates)
+#     name_to_win_rate = dict(raw_win_rates)
+
+#     rankings = []
+
+#     for name, played, won, lost, diff in raw_stats:
+#         # Normalized Experience
+#         exp_score = (played / max_played) * 100 if max_played else 0
+
+#         # Normalized Performance
+#         if max_diff != min_diff:
+#             perf_score = ((diff - min_diff) / (max_diff - min_diff)) * 100
+#         else:
+#             perf_score = 50
+
+#         # Normalized Win Rate
+#         raw_win = name_to_win_rate[name]
+#         win_rate = round(raw_win, 2)
+#         win_score = (raw_win / max_win_rate) * 100 if max_win_rate else 0
+#         win_score = (raw_win / max_win_rate) * 100 if max_win_rate else 0
+
+#         # Final Rating
+#         rating = round(0.35 * perf_score + 0.45 * win_score + 0.2 * exp_score, 2)
+
+#         # Optional partner stats
+#         best = worst = None
+#         if name in player_to_partners:
+#             partners = sorted(
+#                 [p for p in player_to_partners[name] if p["total"] >= 2],
+#                 key=lambda x: x["win_pct"],
+#                 reverse=True
+#             )
+#             if partners:
+#                 best = partners[0]
+#                 worst = partners[-1] if len(partners) > 1 else None
+
+#         rankings.append({
+#             "name": name,
+#             "played": played,
+#             "won": won,
+#             "lost": lost,
+#             "point_diff": round(perf_score, 2),
+#             "win_rate": win_rate,  # ✅ add this
+#             "win_score": round(win_score, 2),
+#             "experience_score": round(exp_score, 2),
+#             "performance_score": round(perf_score, 2),
+#             "final_rating": rating,
+#             "best_partner": best,
+#             "worst_partner": worst
+#         })
+
+
+#     return sorted(rankings, key=lambda x: x["final_rating"], reverse=True)
+
+
+
+
+from sqlalchemy import func
+from db import SessionLocal, PlayerStats, CompletedGame
+
+
+def get_overall_rankings(db):
+    # 1️⃣ Aggregate player stats
+    raw_stats = (
+        db.query(
+            PlayerStats.player,
+            func.sum(PlayerStats.played),
+            func.sum(PlayerStats.won),
+            func.sum(PlayerStats.lost),
+            func.sum(PlayerStats.point_diff),
+        )
+        .group_by(PlayerStats.player)
+        .all()
+    )
+
+    # 2️⃣ Load completed games (for partner stats)
+    games = db.query(
+        CompletedGame.matches,
+        CompletedGame.results
+    ).all()
 
     if not raw_stats:
         return []
 
-    # Partner win% logic
+    # 3️⃣ Partner win% logic (UNCHANGED)
     partner_stats = {}
+
     for matches, results in games:
         if not matches or not results:
             continue
+
         for match, result in zip(matches, results):
             t1, t2 = match["team1"], match["team2"]
             s1, s2 = int(result["team1"]), int(result["team2"])
@@ -274,45 +397,47 @@ def get_overall_rankings():
             if len(t2) == 2:
                 add(t2[0], t2[1], not t1_won)
 
+    # 4️⃣ Build partner mapping
     player_to_partners = {}
     for (p1, p2), (wins, total) in partner_stats.items():
         for a, b in [(p1, p2), (p2, p1)]:
             player_to_partners.setdefault(a, []).append({
-                "partner": b, "wins": wins, "total": total,
+                "partner": b,
+                "wins": wins,
+                "total": total,
                 "win_pct": round((wins / total) * 100, 2) if total else 0
             })
 
-    # Normalize performance, win%, experience
+    # 5️⃣ Normalize metrics
     max_played = max(row[1] for row in raw_stats)
     diffs = [row[4] for row in raw_stats]
-    min_diff = min(diffs)
-    max_diff = max(diffs)
-    raw_win_rates = [(row[0], (row[2] / row[1]) * 100 if row[1] else 0) for row in raw_stats]
-    max_win_rate = max(w for _, w in raw_win_rates)
-    name_to_win_rate = dict(raw_win_rates)
+    min_diff, max_diff = min(diffs), max(diffs)
+
+    raw_win_rates = {
+        row[0]: (row[2] / row[1]) * 100 if row[1] else 0
+        for row in raw_stats
+    }
+    max_win_rate = max(raw_win_rates.values()) if raw_win_rates else 0
 
     rankings = []
 
+    # 6️⃣ Final ranking calculation
     for name, played, won, lost, diff in raw_stats:
-        # Normalized Experience
         exp_score = (played / max_played) * 100 if max_played else 0
 
-        # Normalized Performance
         if max_diff != min_diff:
             perf_score = ((diff - min_diff) / (max_diff - min_diff)) * 100
         else:
             perf_score = 50
 
-        # Normalized Win Rate
-        raw_win = name_to_win_rate[name]
-        win_rate = round(raw_win, 2)
-        win_score = (raw_win / max_win_rate) * 100 if max_win_rate else 0
+        raw_win = raw_win_rates[name]
         win_score = (raw_win / max_win_rate) * 100 if max_win_rate else 0
 
-        # Final Rating
-        rating = round(0.35 * perf_score + 0.45 * win_score + 0.2 * exp_score, 2)
+        rating = round(
+            0.35 * perf_score + 0.45 * win_score + 0.2 * exp_score,
+            2
+        )
 
-        # Optional partner stats
         best = worst = None
         if name in player_to_partners:
             partners = sorted(
@@ -330,7 +455,7 @@ def get_overall_rankings():
             "won": won,
             "lost": lost,
             "point_diff": round(perf_score, 2),
-            "win_rate": win_rate,  # ✅ add this
+            "win_rate": round(raw_win, 2),
             "win_score": round(win_score, 2),
             "experience_score": round(exp_score, 2),
             "performance_score": round(perf_score, 2),
@@ -338,7 +463,6 @@ def get_overall_rankings():
             "best_partner": best,
             "worst_partner": worst
         })
-
 
     return sorted(rankings, key=lambda x: x["final_rating"], reverse=True)
 
@@ -409,22 +533,162 @@ def get_overall_rankings():
 
 #     return sorted(rankings, key=lambda x: x["final_rating"], reverse=True)
 
-def compute_rankings_by_type(match_type="overall"):
+# def compute_rankings_by_type(match_type="overall"):
+#     """
+#     match_type can be 'overall', 'singles', or 'doubles'
+#     """
+#     conn = get_connection()
+#     cur = conn.cursor()
+#     cur.execute("SELECT matches, results FROM completed_games")
+#     games = cur.fetchall()
+#     conn.close()
+
+#     player_stats = {}
+#     partner_stats = {}
+
+#     def update_player(name, won, lost, point_diff):
+#         if name not in player_stats:
+#             player_stats[name] = {"played": 0, "won": 0, "lost": 0, "point_diff": 0}
+#         player_stats[name]["played"] += 1
+#         player_stats[name]["won"] += won
+#         player_stats[name]["lost"] += lost
+#         player_stats[name]["point_diff"] += point_diff
+
+#     def update_partner(p1, p2, won):
+#         key = tuple(sorted([p1, p2]))
+#         if key not in partner_stats:
+#             partner_stats[key] = [0, 0]
+#         if won:
+#             partner_stats[key][0] += 1
+#         partner_stats[key][1] += 1
+
+#     # Collect raw stats
+#     for matches, results in games:
+#         if not matches or not results:
+#             continue
+#         for m, r in zip(matches, results):
+#             t1, t2 = m["team1"], m["team2"]
+#             s1, s2 = int(r["team1"]), int(r["team2"])
+#             t1_won = s1 > s2
+
+#             # Filter by type
+#             if match_type == "singles" and not (len(t1) == 1 and len(t2) == 1):
+#                 continue
+#             if match_type == "doubles" and not (len(t1) == 2 and len(t2) == 2):
+#                 continue
+
+#             # Update player stats
+#             for p in t1:
+#                 update_player(p, 1 if t1_won else 0, 1 if not t1_won else 0, s1 - s2)
+#             for p in t2:
+#                 update_player(p, 1 if not t1_won else 0, 1 if t1_won else 0, s2 - s1)
+
+#             # Update partner stats only for doubles
+#             if len(t1) == 2:
+#                 update_partner(t1[0], t1[1], t1_won)
+#             if len(t2) == 2:
+#                 update_partner(t2[0], t2[1], not t1_won)
+
+#     # Build partner mapping
+#     player_to_partners = {}
+#     for (p1, p2), (wins, total) in partner_stats.items():
+#         for a, b in [(p1, p2), (p2, p1)]:
+#             player_to_partners.setdefault(a, []).append({
+#                 "partner": b,
+#                 "wins": wins,
+#                 "total": total,
+#                 "win_pct": round((wins / total) * 100, 2) if total else 0
+#             })
+
+#     # Normalize metrics
+#     stats_list = [(name, v["played"], v["won"], v["lost"], v["point_diff"]) 
+#                   for name, v in player_stats.items()]
+#     if not stats_list:
+#         return []
+
+#     max_played = max(row[1] for row in stats_list)
+#     min_diff = min(row[4] for row in stats_list)
+#     max_diff = max(row[4] for row in stats_list)
+#     raw_win_rates = [(row[0], (row[2] / row[1]) * 100 if row[1] else 0) for row in stats_list]
+#     max_win_rate = max(w for _, w in raw_win_rates)
+#     name_to_win_rate = dict(raw_win_rates)
+
+#     rankings = []
+
+#     for name, played, won, lost, diff in stats_list:
+#         # Experience
+#         exp_score = (played / max_played) * 100 if max_played else 0
+
+#         # Performance
+#         if max_diff != min_diff:
+#             perf_score = ((diff - min_diff) / (max_diff - min_diff)) * 100
+#         else:
+#             perf_score = 50
+
+#         # Win rate
+#         raw_win = name_to_win_rate[name]
+#         win_score = (raw_win / max_win_rate) * 100 if max_win_rate else 0
+
+#         # Final rating with same weights as overall
+#         rating = round(0.35 * perf_score + 0.45 * win_score + 0.2 * exp_score, 2)
+
+#         # Best/Worst partner info for doubles and overall
+#         best = worst = None
+#         if match_type in ["doubles", "overall"] and name in player_to_partners:
+#             partners = sorted(
+#                 [p for p in player_to_partners[name] if p["total"] >= 2],
+#                 key=lambda x: x["win_pct"],
+#                 reverse=True
+#             )
+#             if partners:
+#                 best = partners[0]
+#                 worst = partners[-1] if len(partners) > 1 else None
+
+#         rankings.append({
+#             "name": name,
+#             "played": played,
+#             "won": won,
+#             "lost": lost,
+#             "point_diff": round(perf_score, 2),
+#             "win_rate": round(raw_win, 2),
+#             "experience_score": round(exp_score, 2),
+#             "performance_score": round(perf_score, 2),
+#             "win_score": round(win_score, 2),
+#             "final_rating": rating,
+#             "best_partner": best,
+#             "worst_partner": worst
+#         })
+
+#     return sorted(rankings, key=lambda x: x["final_rating"], reverse=True)
+
+
+
+from sqlalchemy import func
+from db import CompletedGame
+
+
+def compute_rankings_by_type(db, match_type="overall"):
     """
     match_type can be 'overall', 'singles', or 'doubles'
     """
-    conn = get_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT matches, results FROM completed_games")
-    games = cur.fetchall()
-    conn.close()
+
+    # 1️⃣ Load completed games safely
+    games = db.query(
+        CompletedGame.matches,
+        CompletedGame.results
+    ).all()
 
     player_stats = {}
     partner_stats = {}
 
     def update_player(name, won, lost, point_diff):
         if name not in player_stats:
-            player_stats[name] = {"played": 0, "won": 0, "lost": 0, "point_diff": 0}
+            player_stats[name] = {
+                "played": 0,
+                "won": 0,
+                "lost": 0,
+                "point_diff": 0
+            }
         player_stats[name]["played"] += 1
         player_stats[name]["won"] += won
         player_stats[name]["lost"] += lost
@@ -438,34 +702,45 @@ def compute_rankings_by_type(match_type="overall"):
             partner_stats[key][0] += 1
         partner_stats[key][1] += 1
 
-    # Collect raw stats
+    # 2️⃣ Collect raw stats (UNCHANGED LOGIC)
     for matches, results in games:
         if not matches or not results:
             continue
+
         for m, r in zip(matches, results):
             t1, t2 = m["team1"], m["team2"]
             s1, s2 = int(r["team1"]), int(r["team2"])
             t1_won = s1 > s2
 
-            # Filter by type
+            # Filter by match type
             if match_type == "singles" and not (len(t1) == 1 and len(t2) == 1):
                 continue
             if match_type == "doubles" and not (len(t1) == 2 and len(t2) == 2):
                 continue
 
-            # Update player stats
+            # Update players
             for p in t1:
-                update_player(p, 1 if t1_won else 0, 1 if not t1_won else 0, s1 - s2)
+                update_player(
+                    p,
+                    1 if t1_won else 0,
+                    1 if not t1_won else 0,
+                    s1 - s2
+                )
             for p in t2:
-                update_player(p, 1 if not t1_won else 0, 1 if t1_won else 0, s2 - s1)
+                update_player(
+                    p,
+                    1 if not t1_won else 0,
+                    1 if t1_won else 0,
+                    s2 - s1
+                )
 
-            # Update partner stats only for doubles
+            # Partner stats (doubles only)
             if len(t1) == 2:
                 update_partner(t1[0], t1[1], t1_won)
             if len(t2) == 2:
                 update_partner(t2[0], t2[1], not t1_won)
 
-    # Build partner mapping
+    # 3️⃣ Build partner mapping
     player_to_partners = {}
     for (p1, p2), (wins, total) in partner_stats.items():
         for a, b in [(p1, p2), (p2, p1)]:
@@ -476,39 +751,44 @@ def compute_rankings_by_type(match_type="overall"):
                 "win_pct": round((wins / total) * 100, 2) if total else 0
             })
 
-    # Normalize metrics
-    stats_list = [(name, v["played"], v["won"], v["lost"], v["point_diff"]) 
-                  for name, v in player_stats.items()]
+    # 4️⃣ Normalize metrics
+    stats_list = [
+        (name, v["played"], v["won"], v["lost"], v["point_diff"])
+        for name, v in player_stats.items()
+    ]
+
     if not stats_list:
         return []
 
     max_played = max(row[1] for row in stats_list)
     min_diff = min(row[4] for row in stats_list)
     max_diff = max(row[4] for row in stats_list)
-    raw_win_rates = [(row[0], (row[2] / row[1]) * 100 if row[1] else 0) for row in stats_list]
-    max_win_rate = max(w for _, w in raw_win_rates)
-    name_to_win_rate = dict(raw_win_rates)
+
+    raw_win_rates = {
+        row[0]: (row[2] / row[1]) * 100 if row[1] else 0
+        for row in stats_list
+    }
+    max_win_rate = max(raw_win_rates.values()) if raw_win_rates else 0
 
     rankings = []
 
+    # 5️⃣ Final rating computation (UNCHANGED)
     for name, played, won, lost, diff in stats_list:
-        # Experience
         exp_score = (played / max_played) * 100 if max_played else 0
 
-        # Performance
         if max_diff != min_diff:
             perf_score = ((diff - min_diff) / (max_diff - min_diff)) * 100
         else:
             perf_score = 50
 
-        # Win rate
-        raw_win = name_to_win_rate[name]
+        raw_win = raw_win_rates[name]
         win_score = (raw_win / max_win_rate) * 100 if max_win_rate else 0
 
-        # Final rating with same weights as overall
-        rating = round(0.35 * perf_score + 0.45 * win_score + 0.2 * exp_score, 2)
+        rating = round(
+            0.35 * perf_score + 0.45 * win_score + 0.2 * exp_score,
+            2
+        )
 
-        # Best/Worst partner info for doubles and overall
         best = worst = None
         if match_type in ["doubles", "overall"] and name in player_to_partners:
             partners = sorted(
@@ -538,50 +818,262 @@ def compute_rankings_by_type(match_type="overall"):
     return sorted(rankings, key=lambda x: x["final_rating"], reverse=True)
 
 
-def get_player_profile(player_name):
-    import json
-    from datetime import datetime
-    conn = get_connection()
-    cur = conn.cursor()
+# def get_player_profile(player_name):
+#     import json
+#     from datetime import datetime
+#     conn = get_connection()
+#     cur = conn.cursor()
 
-    # 1) Get aggregate totals quickly
-    cur.execute("""
-        SELECT SUM(played) as total_played,
-               SUM(won) as total_won,
-               SUM(lost) as total_lost,
-               SUM(point_diff) as total_point_diff
-        FROM player_stats WHERE player = %s
-    """, (player_name,))
-    totals = cur.fetchone()
+#     # 1) Get aggregate totals quickly
+#     cur.execute("""
+#         SELECT SUM(played) as total_played,
+#                SUM(won) as total_won,
+#                SUM(lost) as total_lost,
+#                SUM(point_diff) as total_point_diff
+#         FROM player_stats WHERE player = %s
+#     """, (player_name,))
+#     totals = cur.fetchone()
+#     if not totals or totals[0] is None:
+#         conn.close()
+#         return None
+
+#     total_played, total_won, total_lost, total_point_diff = totals
+
+#     # 2) Fetch recent history for charting/ progression (limit to last 50 rows)
+#     cur.execute("""
+#         SELECT played, won, lost, point_diff, game_id, created_at
+#         FROM player_stats
+#         WHERE player = %s
+#         ORDER BY created_at DESC
+#         LIMIT 50
+#     """, (player_name,))
+#     rows = cur.fetchall()
+#     rows = list(reversed(rows))  # oldest -> newest
+
+#     history = []
+#     cum_played = 0
+#     cum_won = 0
+#     cum_lost = 0
+#     cum_pd = 0.0
+
+#     for played, won, lost, point_diff, game_id, created_at in rows:
+#         if isinstance(created_at, str):
+#             try:
+#                 created_at = datetime.fromisoformat(created_at)
+#             except Exception:
+#                 pass
+
+#         played = int(played or 0)
+#         won = int(won or 0)
+#         lost = int(lost or 0)
+#         pd = float(point_diff or 0.0)
+
+#         cum_played += played
+#         cum_won += won
+#         cum_lost += lost
+#         cum_pd += pd
+
+#         wr = (won / played) * 100 if played else 0
+#         avg_pd = (pd / played) if played else 0
+
+#         rating = round(
+#             0.4 * ((avg_pd + 20) / 40) * 100
+#             + 0.3 * wr
+#             + 0.2 * (cum_played / 100) * 100,
+#             2
+#         )
+
+#         history.append({
+#             "date": created_at.isoformat() if hasattr(created_at, "isoformat") else str(created_at),
+#             "rating": rating,
+#             "win_rate": round(wr, 2),
+#             "point_diff": round(avg_pd, 2)
+#         })
+
+#     # 3) Load completed games to compute partner/opponent stats
+#     cur.execute("SELECT matches, results FROM completed_games")
+#     game_rows = cur.fetchall()
+
+#     partner_stats = {}
+#     opponent_stats = {}
+
+#     def safe_load(val):
+#         if val is None:
+#             return []
+#         if isinstance(val, str):
+#             try:
+#                 return json.loads(val)
+#             except Exception:
+#                 return []
+#         return val
+
+#     def update_nested(container, main, other, won):
+#         if main not in container:
+#             container[main] = {}
+#         w, t = container[main].get(other, (0, 0))
+#         if won:
+#             w += 1
+#         t += 1
+#         container[main][other] = (w, t)
+
+#     for matches, results in game_rows:
+#         matches = safe_load(matches)
+#         results = safe_load(results)
+#         if not matches or not results:
+#             continue
+#         for m, r in zip(matches, results):
+#             try:
+#                 t1 = m.get("team1", [])
+#                 t2 = m.get("team2", [])
+#                 s1 = int(r.get("team1", 0))
+#                 s2 = int(r.get("team2", 0))
+#             except Exception:
+#                 continue
+
+#             t1_won = s1 > s2
+#             participated = False
+#             if player_name in t1:
+#                 team = t1
+#                 opp = t2
+#                 won = t1_won
+#                 participated = True
+#             elif player_name in t2:
+#                 team = t2
+#                 opp = t1
+#                 won = not t1_won
+#                 participated = True
+
+#             if not participated:
+#                 continue
+
+#             # partner: teammate if exists
+#             teammates = [p for p in team if p != player_name]
+#             if teammates:
+#                 teammate = teammates[0]
+#                 update_nested(partner_stats, player_name, teammate, won)
+
+#             # opponents
+#             for o in opp:
+#                 update_nested(opponent_stats, player_name, o, won)
+
+#     # Helper to compute best/worst from nested dict
+#     def best_worst_from_nested(nested):
+#         if player_name not in nested:
+#             return None, None
+#         items = []
+#         for other, (wins, total) in nested[player_name].items():
+#             if total >= 2:  # require at least 2 matches together
+#                 win_pct = (wins / total) * 100 if total else 0
+#                 items.append((other, win_pct, total))
+#         if not items:
+#             return None, None
+#         best = max(items, key=lambda x: x[1])
+#         worst = min(items, key=lambda x: x[1])
+#         return {"name": best[0], "win_pct": round(best[1], 2)}, {"name": worst[0], "win_pct": round(worst[1], 2)}
+
+#     best_p, worst_p = best_worst_from_nested(partner_stats)
+#     best_o, worst_o = best_worst_from_nested(opponent_stats)
+
+#     # Convert nested dicts to full lists with counts
+#     matches_with_each = [
+#         {
+#             "player": teammate,
+#             "matches_played": total,
+#             "wins": wins,
+#             "losses": total - wins,
+#             "win_pct": round((wins / total) * 100, 2) if total else 0
+#         }
+#         for teammate, (wins, total) in partner_stats.get(player_name, {}).items()
+#     ]
+
+#     matches_against_each = [
+#         {
+#             "player": opponent,
+#             "matches_played": total,
+#             "wins": wins,
+#             "losses": total - wins,
+#             "win_pct": round((wins / total) * 100, 2) if total else 0
+#         }
+#         for opponent, (wins, total) in opponent_stats.get(player_name, {}).items()
+#     ]
+
+#     conn.close()
+
+#     played_total = int(total_played or 0)
+#     win_pct_overall = round((int(total_won or 0) / played_total) * 100, 2) if played_total else 0
+#     avg_point_diff = round((float(total_point_diff or 0.0) / played_total), 2) if played_total else 0
+
+#     return {
+#         "name": player_name,
+#         "played": played_total,
+#         "won": int(total_won or 0),
+#         "lost": int(total_lost or 0),
+#         "win_rate": win_pct_overall,
+#         "avg_point_diff": avg_point_diff,
+#         "rating_progression": history,
+#         "best_partner": best_p,
+#         "worst_partner": worst_p,
+#         "favourite_opponent": best_o,
+#         "least_favourite_opponent": worst_o,
+#         "matches_with_each": matches_with_each,
+#         "matches_against_each": matches_against_each
+#     }
+
+
+from sqlalchemy import func
+from db import PlayerStats, CompletedGame
+
+
+def get_player_profile(db, player_name):
+    from datetime import datetime
+    import json
+
+    # --------------------------------------------------
+    # 1️⃣ Aggregate totals
+    # --------------------------------------------------
+    totals = (
+        db.query(
+            func.sum(PlayerStats.played),
+            func.sum(PlayerStats.won),
+            func.sum(PlayerStats.lost),
+            func.sum(PlayerStats.point_diff),
+        )
+        .filter(PlayerStats.player == player_name)
+        .one()
+    )
+
     if not totals or totals[0] is None:
-        conn.close()
         return None
 
     total_played, total_won, total_lost, total_point_diff = totals
 
-    # 2) Fetch recent history for charting/ progression (limit to last 50 rows)
-    cur.execute("""
-        SELECT played, won, lost, point_diff, game_id, created_at
-        FROM player_stats
-        WHERE player = %s
-        ORDER BY created_at DESC
-        LIMIT 50
-    """, (player_name,))
-    rows = cur.fetchall()
-    rows = list(reversed(rows))  # oldest -> newest
+    # --------------------------------------------------
+    # 2️⃣ Load recent history (last 50 rows)
+    # --------------------------------------------------
+    rows = (
+        db.query(
+            PlayerStats.played,
+            PlayerStats.won,
+            PlayerStats.lost,
+            PlayerStats.point_diff,
+            PlayerStats.game_id,
+            PlayerStats.created_at,
+        )
+        .filter(PlayerStats.player == player_name)
+        .order_by(PlayerStats.created_at.asc())
+        .limit(50)
+        .all()
+    )
 
     history = []
-    cum_played = 0
-    cum_won = 0
-    cum_lost = 0
+    cum_played = cum_won = cum_lost = 0
     cum_pd = 0.0
 
     for played, won, lost, point_diff, game_id, created_at in rows:
-        if isinstance(created_at, str):
-            try:
-                created_at = datetime.fromisoformat(created_at)
-            except Exception:
-                pass
+        created_at = (
+            created_at if isinstance(created_at, datetime)
+            else datetime.fromisoformat(str(created_at))
+        )
 
         played = int(played or 0)
         won = int(won or 0)
@@ -604,28 +1096,22 @@ def get_player_profile(player_name):
         )
 
         history.append({
-            "date": created_at.isoformat() if hasattr(created_at, "isoformat") else str(created_at),
+            "date": created_at.isoformat(),
             "rating": rating,
             "win_rate": round(wr, 2),
             "point_diff": round(avg_pd, 2)
         })
 
-    # 3) Load completed games to compute partner/opponent stats
-    cur.execute("SELECT matches, results FROM completed_games")
-    game_rows = cur.fetchall()
+    # --------------------------------------------------
+    # 3️⃣ Load completed games
+    # --------------------------------------------------
+    game_rows = db.query(
+        CompletedGame.matches,
+        CompletedGame.results
+    ).all()
 
     partner_stats = {}
     opponent_stats = {}
-
-    def safe_load(val):
-        if val is None:
-            return []
-        if isinstance(val, str):
-            try:
-                return json.loads(val)
-            except Exception:
-                return []
-        return val
 
     def update_nested(container, main, other, won):
         if main not in container:
@@ -637,91 +1123,97 @@ def get_player_profile(player_name):
         container[main][other] = (w, t)
 
     for matches, results in game_rows:
-        matches = safe_load(matches)
-        results = safe_load(results)
         if not matches or not results:
             continue
+
         for m, r in zip(matches, results):
-            try:
-                t1 = m.get("team1", [])
-                t2 = m.get("team2", [])
-                s1 = int(r.get("team1", 0))
-                s2 = int(r.get("team2", 0))
-            except Exception:
-                continue
+            t1 = m.get("team1", [])
+            t2 = m.get("team2", [])
+            s1 = int(r.get("team1", 0))
+            s2 = int(r.get("team2", 0))
 
             t1_won = s1 > s2
+
             participated = False
             if player_name in t1:
-                team = t1
-                opp = t2
-                won = t1_won
+                team, opp, won = t1, t2, t1_won
                 participated = True
             elif player_name in t2:
-                team = t2
-                opp = t1
-                won = not t1_won
+                team, opp, won = t2, t1, not t1_won
                 participated = True
 
             if not participated:
                 continue
 
-            # partner: teammate if exists
+            # Partner
             teammates = [p for p in team if p != player_name]
             if teammates:
-                teammate = teammates[0]
-                update_nested(partner_stats, player_name, teammate, won)
+                update_nested(partner_stats, player_name, teammates[0], won)
 
-            # opponents
+            # Opponents
             for o in opp:
                 update_nested(opponent_stats, player_name, o, won)
 
-    # Helper to compute best/worst from nested dict
-    def best_worst_from_nested(nested):
+    # --------------------------------------------------
+    # 4️⃣ Best / Worst helpers
+    # --------------------------------------------------
+    def best_worst(nested):
         if player_name not in nested:
             return None, None
         items = []
         for other, (wins, total) in nested[player_name].items():
-            if total >= 2:  # require at least 2 matches together
+            if total >= 2:
                 win_pct = (wins / total) * 100 if total else 0
                 items.append((other, win_pct, total))
         if not items:
             return None, None
         best = max(items, key=lambda x: x[1])
         worst = min(items, key=lambda x: x[1])
-        return {"name": best[0], "win_pct": round(best[1], 2)}, {"name": worst[0], "win_pct": round(worst[1], 2)}
+        return (
+            {"name": best[0], "win_pct": round(best[1], 2)},
+            {"name": worst[0], "win_pct": round(worst[1], 2)}
+        )
 
-    best_p, worst_p = best_worst_from_nested(partner_stats)
-    best_o, worst_o = best_worst_from_nested(opponent_stats)
+    best_partner, worst_partner = best_worst(partner_stats)
+    fav_opp, least_fav_opp = best_worst(opponent_stats)
 
-    # Convert nested dicts to full lists with counts
+    # --------------------------------------------------
+    # 5️⃣ Build partner/opponent tables
+    # --------------------------------------------------
     matches_with_each = [
         {
-            "player": teammate,
-            "matches_played": total,
-            "wins": wins,
-            "losses": total - wins,
-            "win_pct": round((wins / total) * 100, 2) if total else 0
+            "player": p,
+            "matches_played": t,
+            "wins": w,
+            "losses": t - w,
+            "win_pct": round((w / t) * 100, 2) if t else 0
         }
-        for teammate, (wins, total) in partner_stats.get(player_name, {}).items()
+        for p, (w, t) in partner_stats.get(player_name, {}).items()
     ]
 
     matches_against_each = [
         {
-            "player": opponent,
-            "matches_played": total,
-            "wins": wins,
-            "losses": total - wins,
-            "win_pct": round((wins / total) * 100, 2) if total else 0
+            "player": p,
+            "matches_played": t,
+            "wins": w,
+            "losses": t - w,
+            "win_pct": round((w / t) * 100, 2) if t else 0
         }
-        for opponent, (wins, total) in opponent_stats.get(player_name, {}).items()
+        for p, (w, t) in opponent_stats.get(player_name, {}).items()
     ]
 
-    conn.close()
-
+    # --------------------------------------------------
+    # 6️⃣ Final response
+    # --------------------------------------------------
     played_total = int(total_played or 0)
-    win_pct_overall = round((int(total_won or 0) / played_total) * 100, 2) if played_total else 0
-    avg_point_diff = round((float(total_point_diff or 0.0) / played_total), 2) if played_total else 0
+    win_pct_overall = (
+        round((int(total_won or 0) / played_total) * 100, 2)
+        if played_total else 0
+    )
+    avg_point_diff = (
+        round((float(total_point_diff or 0.0) / played_total), 2)
+        if played_total else 0
+    )
 
     return {
         "name": player_name,
@@ -731,10 +1223,10 @@ def get_player_profile(player_name):
         "win_rate": win_pct_overall,
         "avg_point_diff": avg_point_diff,
         "rating_progression": history,
-        "best_partner": best_p,
-        "worst_partner": worst_p,
-        "favourite_opponent": best_o,
-        "least_favourite_opponent": worst_o,
+        "best_partner": best_partner,
+        "worst_partner": worst_partner,
+        "favourite_opponent": fav_opp,
+        "least_favourite_opponent": least_fav_opp,
         "matches_with_each": matches_with_each,
         "matches_against_each": matches_against_each
     }
