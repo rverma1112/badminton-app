@@ -19,7 +19,7 @@ app = Flask(__name__)
 CORS(app)
 
 # Initialize database on server start
-init_db()
+#init_db()
 ongoing_games = {}
 
 # In-memory game storage
@@ -238,4 +238,5 @@ def handle_delete_game():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    init_db
+    app.run(host="0.0.0.0", port=10000)
