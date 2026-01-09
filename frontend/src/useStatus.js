@@ -17,12 +17,13 @@ export function useStatus(poll = true) {
   }
 
   useEffect(() => {
-    refresh();
-    if (!poll) return;
+  refresh();
 
-    const id = setInterval(refresh, 15000);
-    return () => clearInterval(id);
-  }, []);
+  if (!poll) return;
+
+  const id = setInterval(refresh, 15000);
+  return () => clearInterval(id);
+}, [poll]);
 
   return { status, loading, refresh };
 }

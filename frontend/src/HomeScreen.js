@@ -4,7 +4,8 @@ import { useStatus } from "./useStatus"; // adjust path if needed
 
 const HomeScreen = ({ ongoingGames = [] }) => {
   const navigate = useNavigate();
-  const { status, loading } = useStatus(false);
+  const { status } = useStatus(false);
+
 
   const buttons = [
     { label: "CREATE GAME", route: "/create", heavy: false },
