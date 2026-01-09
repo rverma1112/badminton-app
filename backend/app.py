@@ -13,6 +13,8 @@ import random
 from collections import defaultdict
 import uuid
 from datetime import datetime
+from activity import mark_active
+
 
 
 app = Flask(__name__)
@@ -87,13 +89,16 @@ def add_player():
 
 @app.route("/get_players", methods=["GET"])
 def get_players():
+    mark_active()
     players = get_all_players_from_db()
     return jsonify(players)
 
 
-@app.route("/create_game", methods=["POST"])
+
+
 @app.route("/create_game", methods=["POST"])
 def create_game():
+    mark_active()
     data = request.get_json()
     players = data["players"]
     teams = data["teams"]
@@ -165,6 +170,7 @@ def get_doubles_rankings():
 
 @app.route("/get_ongoing_games")
 def get_ongoing_games():
+    mark_active()
     games = get_all_ongoing_games_from_db()
     return jsonify({"games": games})
 
@@ -174,6 +180,7 @@ from db import save_completed_game_and_stats
 
 @app.route("/complete_game", methods=["POST"])
 def complete_game():
+    mark_active()
     try:
         data = request.get_json()
         stats = data.get("stats", [])
@@ -266,6 +273,7 @@ def get_player_profile_route():
 
 @app.route("/update_match_score", methods=["POST"])
 def update_match_score_route():
+    mark_active()
     data = request.get_json()
     success = update_match_score(
         data["game_id"],
@@ -280,6 +288,7 @@ from flask import Flask, request, jsonify
 
 @app.route("/delete_game", methods=["POST"])
 def handle_delete_game():
+    mark_active()
     try:
         data = request.get_json()
         game_id = data.get("game_id")
