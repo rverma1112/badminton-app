@@ -8,6 +8,8 @@ import HomeScreen from "./HomeScreen";
 import OngoingGamesScreen from "./OngoingGamesScreen";
 import CreateGameScreen from "./CreateGameScreen";
 import AddPlayerScreen from "./AddPlayerScreen";
+import { useStatus } from "./useStatus";
+
 
 import { Routes, Route, useNavigate } from "react-router-dom";
 
@@ -46,6 +48,15 @@ const App = () => {
       .then((res) => res.json())
       .then((data) => setOngoingGames(data.games));
   }, []);
+const { status, loading } = useStatus(false);
+
+if (loading) {
+  return <p>Checking backend status…</p>;
+}
+
+if (!status || status.backend !== "ok") {
+  return <p>Backend is waking up. Please wait…</p>;
+}
 
   // 🔴 COMPLETE GAME (THIS IS THE KEY FIX)
   const endGame = async (wins, scores) => {

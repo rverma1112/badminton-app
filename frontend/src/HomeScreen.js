@@ -1,23 +1,40 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { useStatus } from "./useStatus"; // adjust path if needed
 
 const HomeScreen = ({ ongoingGames = [] }) => {
   const navigate = useNavigate();
+  const { status, loading } = useStatus(false);
 
   const buttons = [
-    { label: "CREATE GAME", route: "/create" },
-    { label: "ADD NEW PLAYER", route: "/add-player" },
-    { label: "VIEW RANKINGS", route: "/rankings" },
-    { label: "ONGOING GAMES", route: "/ongoing" },
-    { label: "VIEW PREVIOUS GAMES", route: "/previous" },
-    { label: "VIEW PROFILES", route: "/profile" },
+    { label: "CREATE GAME", route: "/create", heavy: false },
+    { label: "ADD NEW PLAYER", route: "/add-player", heavy: false },
+    { label: "VIEW RANKINGS", route: "/rankings", heavy: true },
+    { label: "ONGOING GAMES", route: "/ongoing", heavy: false },
+    { label: "VIEW PREVIOUS GAMES", route: "/previous", heavy: false },
+    { label: "VIEW PROFILES", route: "/profile", heavy: true },
   ];
+
+  function handleNavigate(btn) {
+    if (btn.heavy && (!status || !status.safe_for_heavy)) {
+      alert(
+        "Backend is warming up or computing stats.\n\n" +
+        "Please wait a moment or visit the Status page."
+      );
+      return;
+    }
+    navigate(btn.route);
+  }
 
   return (
     <div style={styles.container}>
       <div style={styles.logoSection}>
         <div style={styles.logo}>
-          <img src="/shuttle-icon-1.png" alt="Shuttle" style={styles.logoImage} />
+          <img
+            src="/shuttle-icon-1.png"
+            alt="Shuttle"
+            style={styles.logoImage}
+          />
           <h1 style={styles.logoText}>BADMINTON STATS TRACKER</h1>
         </div>
       </div>
@@ -34,7 +51,7 @@ const HomeScreen = ({ ongoingGames = [] }) => {
                 url('/bg${i % 4 + 1}.png')
               `,
             }}
-            onClick={() => navigate(btn.route)}
+            onClick={() => handleNavigate(btn)}
           >
             <span style={styles.cardText}>{btn.label}</span>
           </div>
@@ -46,7 +63,8 @@ const HomeScreen = ({ ongoingGames = [] }) => {
 
 const styles = {
   container: {
-    backgroundImage: "linear-gradient(to bottom right, #004d86, #000000, #366e00)",
+    backgroundImage:
+      "linear-gradient(to bottom right, #004d86, #000000, #366e00)",
     color: "#fff",
     minHeight: "100vh",
     padding: "2rem",

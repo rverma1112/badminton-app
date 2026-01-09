@@ -1,26 +1,46 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { apiFetch } from "./api";          // adjust path if needed
+import { useStatus } from "./useStatus";   // adjust path if needed
 
 const OverallRankingScreen = () => {
   const navigate = useNavigate();
+  const { status, loading } = useStatus(false);
 
   const [overall, setOverall] = useState([]);
   const [singles, setSingles] = useState([]);
   const [doubles, setDoubles] = useState([]);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("https://badminton-api-j9ja.onrender.com/get_rankings")
-      .then((res) => res.json())
-      .then((data) => setOverall(data.rankings || []));
+    if (loading) return;
+    if (!status?.safe_for_heavy) return;
 
-    fetch("https://badminton-api-j9ja.onrender.com/get_singles_rankings")
-      .then((res) => res.json())
-      .then((data) => setSingles(data.rankings || []));
+    let cancelled = false;
 
-    fetch("https://badminton-api-j9ja.onrender.com/get_doubles_rankings")
-      .then((res) => res.json())
-      .then((data) => setDoubles(data.rankings || []));
-  }, []);
+    async function loadRankings() {
+      try {
+        const overallRes = await apiFetch("/get_rankings");
+        const singlesRes = await apiFetch("/get_singles_rankings");
+        const doublesRes = await apiFetch("/get_doubles_rankings");
+
+        if (!cancelled) {
+          setOverall(overallRes.rankings || []);
+          setSingles(singlesRes.rankings || []);
+          setDoubles(doublesRes.rankings || []);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setError("Failed to load rankings. Please try again.");
+        }
+      }
+    }
+
+    loadRankings();
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, status]);
 
   const renderTable = (title, rankings) => (
     <div style={{ marginBottom: "2rem" }}>
@@ -57,9 +77,7 @@ const OverallRankingScreen = () => {
                 }}
               >
                 <td style={tdStyle}>{i + 1}</td>
-                <td style={tdStyle}>
-                  <strong>{r.name}</strong>
-                </td>
+                <td style={tdStyle}><strong>{r.name}</strong></td>
                 <td style={tdStyle}>{r.played}</td>
                 <td style={tdStyle}>{r.won}</td>
                 <td style={tdStyle}>{r.lost}</td>
@@ -82,6 +100,33 @@ const OverallRankingScreen = () => {
     </div>
   );
 
+  // ---------- UI STATES ----------
+  if (loading) {
+    return <p style={{ textAlign: "center" }}>Checking system status…</p>;
+  }
+
+  if (!status?.safe_for_heavy) {
+    return (
+      <div style={{ textAlign: "center", padding: "2rem" }}>
+        <h3>Rankings not ready yet</h3>
+        <p>
+          Backend is warming up or computing in background.<br />
+          Please check the <strong>Status</strong> page.
+        </p>
+        <button
+          onClick={() => navigate("/status")}
+          style={buttonStyle}
+        >
+          Go to Status
+        </button>
+      </div>
+    );
+  }
+
+  if (error) {
+    return <p style={{ color: "red", textAlign: "center" }}>{error}</p>;
+  }
+
   return (
     <div
       style={{
@@ -102,15 +147,7 @@ const OverallRankingScreen = () => {
       <div style={{ textAlign: "center", marginTop: "2rem" }}>
         <button
           onClick={() => navigate("/")}
-          style={{
-            padding: "10px 20px",
-            background: "#6c757d",
-            color: "white",
-            border: "none",
-            borderRadius: "6px",
-            fontSize: "1rem",
-            cursor: "pointer",
-          }}
+          style={buttonStyle}
         >
           ⬅ Back to Home
         </button>
@@ -119,16 +156,25 @@ const OverallRankingScreen = () => {
   );
 };
 
-// Table header style
+// ---- styles ----
 const thStyle = {
   padding: "12px 10px",
   borderBottom: "2px solid #ddd",
 };
 
-// Table cell style
 const tdStyle = {
   padding: "10px 8px",
   whiteSpace: "nowrap",
+};
+
+const buttonStyle = {
+  padding: "10px 20px",
+  background: "#6c757d",
+  color: "white",
+  border: "none",
+  borderRadius: "6px",
+  fontSize: "1rem",
+  cursor: "pointer",
 };
 
 export default OverallRankingScreen;

@@ -14,6 +14,8 @@ from collections import defaultdict
 import uuid
 from datetime import datetime
 from activity import mark_active
+from idle_worker import start_idle_worker
+
 
 
 
@@ -41,6 +43,7 @@ RANKINGS_CACHE = {
 }
 
 PLAYER_PROFILE_CACHE = {}
+start_idle_worker()
 
 # ---- Match Scheduling Logic ---- #
 def generate_balanced_schedule(team1, team2, total_matches):
@@ -75,6 +78,7 @@ def generate_balanced_schedule(team1, team2, total_matches):
 
 @app.route("/add_player", methods=["POST"])
 def add_player():
+    mark_active
     data = request.get_json()
     name = data.get("name", "").strip()
     if not name:
@@ -93,7 +97,82 @@ def get_players():
     players = get_all_players_from_db()
     return jsonify(players)
 
+@app.route("/health")
+def health():
+    return jsonify({
+        "backend": "ok",
+        "time": datetime.utcnow().isoformat()
+    })
+from db import SessionLocal
 
+@app.route("/db_health")
+def db_health():
+    try:
+        db = SessionLocal()
+        db.execute("SELECT 1")
+        return jsonify({"database": "ok"})
+    except Exception as e:
+        return jsonify({"database": "down", "error": str(e)}), 500
+    finally:
+        try:
+            db.close()
+        except:
+            pass
+
+
+from activity import seconds_since_last_active
+
+@app.route("/capabilities")
+def capabilities():
+    idle_seconds = seconds_since_last_active()
+
+    return jsonify({
+        "essential": {
+            "get_players": True,
+            "create_game": True,
+            "save_scores": True,
+            "ongoing_games": True,
+            "completed_games": True
+        },
+        "heavy": {
+            "rankings": idle_seconds > 60,
+            "player_profiles": idle_seconds > 60
+        },
+        "idle_seconds": int(idle_seconds)
+    })
+
+
+
+@app.route("/status")
+def status():
+    try:
+        db = SessionLocal()
+        db.execute("SELECT 1")
+        db_ok = True
+    except:
+        db_ok = False
+    finally:
+        try:
+            db.close()
+        except:
+            pass
+
+    idle_seconds = seconds_since_last_active()
+
+    return jsonify({
+        "backend": "ok",
+        "database": "ok" if db_ok else "down",
+        "idle_seconds": int(idle_seconds),
+        "safe_for_heavy": idle_seconds > 60,
+        "last_checked": datetime.utcnow().isoformat()
+    })
+
+from heavy_tasks import run_heavy_tasks
+
+@app.route("/run_heavy_tasks", methods=["POST"])
+def run_heavy_tasks_route():
+    result = run_heavy_tasks(force=True)
+    return jsonify(result)
 
 
 @app.route("/create_game", methods=["POST"])
