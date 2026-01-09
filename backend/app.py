@@ -16,7 +16,7 @@ from datetime import datetime
 from activity import mark_active
 from idle_worker import start_idle_worker
 
-
+import os
 
 
 app = Flask(__name__)
@@ -43,7 +43,8 @@ RANKINGS_CACHE = {
 }
 
 PLAYER_PROFILE_CACHE = {}
-start_idle_worker()
+if os.environ.get("ENABLE_IDLE_WORKER") == "true":
+    start_idle_worker()
 
 # ---- Match Scheduling Logic ---- #
 def generate_balanced_schedule(team1, team2, total_matches):
@@ -78,7 +79,7 @@ def generate_balanced_schedule(team1, team2, total_matches):
 
 @app.route("/add_player", methods=["POST"])
 def add_player():
-    mark_active
+    mark_active()
     data = request.get_json()
     name = data.get("name", "").strip()
     if not name:
@@ -109,10 +110,10 @@ from db import SessionLocal
 def db_health():
     try:
         db = SessionLocal()
-        db.execute("SELECT 1")
+        db.execute("SELECT 1").scalar()
         return jsonify({"database": "ok"})
     except Exception as e:
-        return jsonify({"database": "down", "error": str(e)}), 500
+        return jsonify({"database": "down"}), 500
     finally:
         try:
             db.close()

@@ -14,12 +14,17 @@ from sqlalchemy import create_engine
 
 engine = create_engine(
     DATABASE_URL,
-    pool_size=3,          # VERY IMPORTANT
-    max_overflow=0,       # NO extra connections
+    pool_size=3,
+    max_overflow=0,
     pool_timeout=30,
     pool_recycle=900,
-    pool_pre_ping=True
+    pool_pre_ping=True,
+    connect_args={
+        "connect_timeout": 5   # 🔑 ABSOLUTELY REQUIRED
+    }
 )
+
+
 
 
 
