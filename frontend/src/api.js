@@ -1,6 +1,7 @@
 const API =
-  import.meta.env.VITE_API_URL ||
+  process.env.REACT_APP_API_URL ||
   "https://badminton-api-j9ja.onrender.com";
+;
 
 export async function apiFetch(path, options = {}) {
   const controller = new AbortController();

@@ -1,10 +1,14 @@
 import { useStatus } from "./useStatus";
 import { apiFetch } from "./api";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+
 
 export default function StatusScreen() {
   const { status, loading, refresh } = useStatus();
   const [msg, setMsg] = useState("");
+  const navigate = useNavigate();
 
   async function runHeavy() {
     setMsg("Running heavy tasks...");
@@ -21,6 +25,7 @@ export default function StatusScreen() {
 
   return (
     <div>
+    <div>
       <h2>Status</h2>
       <p>Backend: {status.backend}</p>
       <p>Database: {status.database}</p>
@@ -36,5 +41,24 @@ export default function StatusScreen() {
 
       {msg && <p>{msg}</p>}
     </div>
+<div style={{ textAlign: "center", marginTop: "2rem" }}>
+  <button
+    onClick={() => navigate("/")}
+    style={{
+      padding: "10px 16px",
+      backgroundColor: "#6c757d",
+      color: "white",
+      border: "none",
+      borderRadius: "6px",
+      fontWeight: "bold",
+      cursor: "pointer",
+    }}
+  >
+    ⬅ Back to Home
+  </button>
+</div>
+</div>
+    
   );
 }
+

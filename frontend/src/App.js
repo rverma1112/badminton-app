@@ -9,6 +9,8 @@ import OngoingGamesScreen from "./OngoingGamesScreen";
 import CreateGameScreen from "./CreateGameScreen";
 import AddPlayerScreen from "./AddPlayerScreen";
 import { useStatus } from "./useStatus";
+import StatusScreen from "./StatusScreen";
+
 
 
 import { Routes, Route, useNavigate } from "react-router-dom";
@@ -212,6 +214,8 @@ if (!status || status.backend !== "ok") {
         <Route path="/previous" element={<PreviousGamesScreen />} />
         <Route path="/rankings" element={<OverallRankingScreen />} />
         <Route path="/profile" element={<PlayerProfileScreen />} />
+        <Route path="/status" element={<StatusScreen />} />
+
         <Route
           path="/daily-ranking"
           element={<DailyRankingScreen stats={dailyStats} />}

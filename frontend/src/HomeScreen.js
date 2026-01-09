@@ -14,6 +14,8 @@ const HomeScreen = ({ ongoingGames = [] }) => {
     { label: "ONGOING GAMES", route: "/ongoing", heavy: false },
     { label: "VIEW PREVIOUS GAMES", route: "/previous", heavy: false },
     { label: "VIEW PROFILES", route: "/profile", heavy: true },
+    { label: "SYSTEM STATUS", route: "/status", heavy: false },
+
   ];
 
   function handleNavigate(btn) {
