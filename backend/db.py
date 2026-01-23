@@ -5,6 +5,9 @@ from sqlalchemy.dialects.postgresql import JSON
 from datetime import datetime
 from sqlalchemy.exc import OperationalError
 import time
+from sqlalchemy import text
+from sqlalchemy.exc import OperationalError
+import time
 
 import json
 import psycopg2
@@ -30,6 +33,21 @@ engine = create_engine(
 
 
 
+def warmup_db():
+    last_error = None
+    for attempt in range(5):  # ~20s total
+        try:
+            db = SessionLocal()
+            db.execute(text("SELECT 1"))
+            db.close()
+            return True
+        except OperationalError as e:
+            last_error = e
+            wait = 2 + attempt * 3
+            print(f"⏳ DB warming up, retrying in {wait}s...")
+            time.sleep(wait)
+
+    raise last_error
 
 
 def with_db_retry(fn):
