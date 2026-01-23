@@ -97,15 +97,34 @@ def get_players():
     mark_active()
     players = get_all_players_from_db()
     return jsonify(players)
+# @app.route("/warmup", methods=["GET"])
+# def warmup():
+#     try:
+#         db = SessionLocal()
+#         db.execute("SELECT 1")
+#         db.close()
+#         return {"status": "db ready"}, 200
+#     except Exception as e:
+#         return {"status": "db not ready"}, 503
+
+import time
+from sqlalchemy import text
+from sqlalchemy.exc import OperationalError
+
 @app.route("/warmup", methods=["GET"])
 def warmup():
-    try:
-        db = SessionLocal()
-        db.execute("SELECT 1")
-        db.close()
-        return {"status": "db ready"}, 200
-    except Exception as e:
-        return {"status": "db not ready"}, 503
+    for attempt in range(5):  # ~20 seconds max
+        try:
+            db = SessionLocal()
+            db.execute(text("SELECT 1"))
+            db.close()
+            return {"status": "db ready"}, 200
+        except OperationalError:
+            wait = 2 + attempt * 3
+            print(f"⏳ DB warming up, retrying in {wait}s...")
+            time.sleep(wait)
+
+    return {"status": "db not ready"}, 503
 
 @app.route("/health")
 def health():
