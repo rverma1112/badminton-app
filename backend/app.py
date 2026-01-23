@@ -97,6 +97,15 @@ def get_players():
     mark_active()
     players = get_all_players_from_db()
     return jsonify(players)
+@app.route("/warmup", methods=["GET"])
+def warmup():
+    try:
+        db = SessionLocal()
+        db.execute("SELECT 1")
+        db.close()
+        return {"status": "db ready"}, 200
+    except Exception as e:
+        return {"status": "db not ready"}, 503
 
 @app.route("/health")
 def health():

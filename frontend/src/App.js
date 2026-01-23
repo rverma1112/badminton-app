@@ -29,8 +29,11 @@ const App = () => {
   const [currentGame, setCurrentGame] = useState(null);
   const [ongoingGames, setOngoingGames] = useState([]);
   const [dailyStats, setDailyStats] = useState([]);
+  const [dbReady, setDbReady] = useState(false);
+
 
   useEffect(() => {
+  if (!dbReady) return;
   if (players.length > 0) return;
 
   fetch(`${API}/get_players`)
@@ -41,24 +44,58 @@ const App = () => {
       localStorage.setItem("players", JSON.stringify(list));
     })
     .catch(() => setPlayers([]));
-}, [players]);
+}, [players, dbReady]);
+
 
 
   // Load ongoing games
+  // useEffect(() => {
+  //   fetch(`${API}/get_ongoing_games`)
+  //     .then((res) => res.json())
+  //     .then((data) => setOngoingGames(data.games));
+  // }, []);
   useEffect(() => {
-    fetch(`${API}/get_ongoing_games`)
-      .then((res) => res.json())
-      .then((data) => setOngoingGames(data.games));
-  }, []);
+  if (!dbReady) return;
+
+  fetch(`${API}/get_ongoing_games`)
+    .then((res) => res.json())
+    .then((data) => setOngoingGames(data.games))
+    .catch(() => setOngoingGames([]));
+}, [dbReady]);
+
 const { status, loading } = useStatus(false);
+// 🔥 DB WARM-UP EFFECT (Fix C)
+useEffect(() => {
+  if (!status || status.backend !== "ok") return;
+
+  const warmupDb = async () => {
+    try {
+      const res = await fetch(`${API}/warmup`);
+      if (res.ok) {
+        setDbReady(true);
+      } else {
+        setTimeout(warmupDb, 3000);
+      }
+    } catch {
+      setTimeout(warmupDb, 3000);
+    }
+  };
+
+  warmupDb();
+}, [status]);
 
 if (loading) {
   return <p>Checking backend status…</p>;
 }
 
 if (!status || status.backend !== "ok") {
-  return <p>Backend is waking up. Please wait…</p>;
+  return <p>Backend is waking up…</p>;
 }
+
+if (!dbReady) {
+  return <p>Warming up database…</p>;
+}
+
 
   // 🔴 COMPLETE GAME (THIS IS THE KEY FIX)
   const endGame = async (wins, scores) => {

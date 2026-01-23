@@ -34,16 +34,18 @@ engine = create_engine(
 
 def with_db_retry(fn):
     def wrapper(*args, **kwargs):
-        for attempt in range(2):
+        last_error = None
+        for attempt in range(3):
             try:
                 return fn(*args, **kwargs)
             except OperationalError as e:
-                if attempt == 0:
-                    print("⚠️ DB connection failed, retrying once...")
-                    time.sleep(2)
-                else:
-                    raise
+                last_error = e
+                wait = 2 + attempt * 3  # 2s → 5s → 8s
+                print(f"⚠️ DB not ready, retrying in {wait}s...")
+                time.sleep(wait)
+        raise last_error
     return wrapper
+
 
 
 #SessionLocal = sessionmaker(bind=engine)
