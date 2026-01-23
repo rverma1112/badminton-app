@@ -10,6 +10,7 @@ import CreateGameScreen from "./CreateGameScreen";
 import AddPlayerScreen from "./AddPlayerScreen";
 import { useStatus } from "./useStatus";
 import StatusScreen from "./StatusScreen";
+import { Navigate } from "react-router-dom";
 
 
 
@@ -246,8 +247,15 @@ if (!dbReady) {
         />
         <Route
           path="/game"
-          element={<GameScreen game={currentGame} onEndGame={endGame} />}
+          element={
+            currentGame ? (
+              <GameScreen game={currentGame} onEndGame={endGame} />
+            ) : (
+              <Navigate to="/ongoing" replace />
+            )
+          }
         />
+
         <Route path="/previous" element={<PreviousGamesScreen />} />
         <Route path="/rankings" element={<OverallRankingScreen />} />
         <Route path="/profile" element={<PlayerProfileScreen />} />
